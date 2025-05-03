@@ -23,7 +23,14 @@ export class HomePage implements OnInit {
     window.addEventListener('online', () => this.updateOnlineStatus(true));
     window.addEventListener('offline', () => this.updateOnlineStatus(false));
     if (this.isOnline) {
-      this.checkSiteAvailability();
+      this.checkSiteV2('https://api.github.com/repos/tosinloluwa/quickhelp/releases/latest').then(info => {
+        this.isLoaded = true;
+        this.isLoading = false;
+        this.errorMessage = null;
+      }).catch(err => {
+        this.errorMessage = 'Unable to load chat. Please check your internet connection.';
+        this.isLoading = false;
+      });
     }
   }
 
@@ -37,31 +44,34 @@ export class HomePage implements OnInit {
     }
   }
 
-  checkSiteAvailability() {
+  async checkSiteAvailability() {
     console.log('Checking site availability...');
     this.isLoading = true;
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://quickhelp.com.ng/chat.php';
-    iframe.style.display = 'none';
+    this.isLoaded = false;
+    this.errorMessage = null;
 
-    iframe.onload = () => {
-      console.log('Iframe loaded successfully');
-      this.isLoaded = true;
-      this.isLoading = false;
-    };
+    try {
+      // Use fetch with a timeout to check site availability
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
+      const response = await fetch('https://quickhelp.com.ng/chat.php', {
+        method: 'HEAD', // Lightweight request
+        signal: controller.signal,
+      });
 
-    iframe.onerror = () => {
-      console.log('Iframe failed to load');
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        this.isLoaded = true;
+        this.isLoading = false;
+      } else {
+        this.errorMessage = 'Unable to load chat. Please try again.';
+        this.isLoading = false;
+      }
+    } catch (error) {
+      console.error('Site availability check failed:', error);
       this.errorMessage = 'Unable to load chat. Please check your internet connection.';
       this.isLoading = false;
-    };
-
-    document.body.appendChild(iframe);
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-    }, 5000);
+    }
   }
 
   showChat() {
