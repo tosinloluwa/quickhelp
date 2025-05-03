@@ -7,12 +7,39 @@
   transform: translateY(-50%);
 }
 
+.offline-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: linear-gradient(135deg, #ff6b6b, #4ecdc4);
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.offline-icon {
+  font-size: 80px;
+  margin-bottom: 20px;
+}
+
+.offline-container h1 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+
+.offline-container p {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
 .image-overlay {
-  position: relative; /* Position relative to the container */
-  top: -50px; /* Adjust this value as needed to position the image above the button */
+  position: relative;
+  top: -50px;
   width: 100%;
-  z-index: 2; /* Ensure the image is above other elements */
-  cursor: pointer; /* Add pointer cursor to indicate it's clickable */
+  z-index: 2;
+  cursor: pointer;
 }
 
 #container strong {
