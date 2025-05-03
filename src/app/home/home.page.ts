@@ -1,20 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon, IonToggle } from '@ionic/angular/standalone';
+import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon, IonButtons } from '@ionic/angular/standalone';
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  imports: [CommonModule, FormsModule, IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon, IonToggle],
+  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon, IonButtons],
 })
 export class HomePage implements OnInit {
   isLoading: boolean = false;
   errorMessage: string | null = null;
   isOnline: boolean = navigator.onLine;
-  isChatEnabled: boolean = true;
   isWebsiteAvailable: boolean = false;
 
   constructor() {}
@@ -24,9 +22,49 @@ export class HomePage implements OnInit {
     window.addEventListener('online', () => this.updateOnlineStatus(true));
     window.addEventListener('offline', () => this.updateOnlineStatus(false));
 
-    // Check website availability if online and chat enabled
-    if (this.isOnline && this.isChatEnabled) {
+    // Initial network check
+    this.checkNetworkStatus();
+
+    // Periodic network check every 10 seconds
+    setInterval(() => {
+      if (!this.isOnline) {
+        this.checkNetworkStatus();
+      }
+    }, 10000);
+  }
+
+  async checkNetworkStatus(): Promise<void> {
+    console.log('Checking network status...');
+    this.isOnline = navigator.onLine;
+
+    if (!this.isOnline) {
+      this.isWebsiteAvailable = false;
+      this.isLoading = false;
+      this.errorMessage = null;
+      return;
+    }
+
+    // Fallback network check with fetch
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      await fetch('https://www.google.com/favicon.ico', {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      this.isOnline = true;
+    } catch (error) {
+      console.log('Network check failed:', error);
+      this.isOnline = false;
+    }
+
+    if (this.isOnline) {
       this.checkWebsiteAvailability();
+    } else {
+      this.isWebsiteAvailable = false;
+      this.isLoading = false;
+      this.errorMessage = null;
     }
   }
 
@@ -34,7 +72,7 @@ export class HomePage implements OnInit {
     this.isOnline = isOnline;
     this.isLoading = false;
     this.errorMessage = null;
-    if (this.isOnline && this.isChatEnabled) {
+    if (this.isOnline) {
       this.checkWebsiteAvailability();
     } else {
       this.isWebsiteAvailable = false;
@@ -60,7 +98,7 @@ export class HomePage implements OnInit {
           document.body.removeChild(iframe);
         }
       }
-    }, 5000); // 5-second timeout
+    }, 5000);
 
     iframe.onload = () => {
       console.log('Website loaded successfully');
@@ -99,21 +137,17 @@ export class HomePage implements OnInit {
     this.isWebsiteAvailable = false;
   }
 
-  onToggleChange(): void {
-    console.log('Chat toggle changed:', this.isChatEnabled);
-    if (this.isChatEnabled && this.isOnline) {
-      this.checkWebsiteAvailability();
-    } else {
-      this.isWebsiteAvailable = false;
-      this.isLoading = false;
-      this.errorMessage = null;
-    }
+  retryConnection(): void {
+    this.checkNetworkStatus();
   }
 
-  retryConnection(): void {
-    this.isOnline = navigator.onLine;
-    if (this.isOnline && this.isChatEnabled) {
-      this.checkWebsiteAvailability();
+  closeApp(): void {
+    console.log('Closing app...');
+    if ((navigator as any).app && (navigator as any).app.exitApp) {
+      (navigator as any).app.exitApp();
+    } else {
+      console.log('Exit not supported in this environment');
+      window.close(); // Fallback for browser
     }
   }
 }
