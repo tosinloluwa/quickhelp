@@ -62,6 +62,12 @@
   background: transparent;
 }
 
+/* Style for toggle in toolbar */
+ion-toggle {
+  --background-checked: #4ecdc4;
+  --handle-background-checked: #ffffff;
+}
+
 /* Remove unused styles */
 .image-overlay,
 #container,
