@@ -62,10 +62,14 @@
   background: transparent;
 }
 
-/* Style for toggle in toolbar */
-ion-toggle {
-  --background-checked: #4ecdc4;
-  --handle-background-checked: #ffffff;
+/* Style for close button */
+ion-button {
+  --color: white;
+  --background: transparent;
+}
+
+ion-icon[name="power-outline"] {
+  font-size: 24px;
 }
 
 /* Remove unused styles */
