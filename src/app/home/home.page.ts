@@ -10,31 +10,24 @@ import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, Ion
   imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon],
 })
 export class HomePage implements OnInit {
-  isLoading = false;
-  isLoaded = false;
-  showIframe = false;
+  isLoading: boolean = false;
+  isLoaded: boolean = false;
+  showIframe: boolean = false;
   errorMessage: string | null = null;
-  isOnline = navigator.onLine;
+  isOnline: boolean = navigator.onLine;
 
   constructor() {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     // Monitor network status
     window.addEventListener('online', () => this.updateOnlineStatus(true));
     window.addEventListener('offline', () => this.updateOnlineStatus(false));
     if (this.isOnline) {
-      this.checkSiteV2('https://api.github.com/repos/tosinloluwa/quickhelp/releases/latest').then(info => {
-        this.isLoaded = true;
-        this.isLoading = false;
-        this.errorMessage = null;
-      }).catch(err => {
-        this.errorMessage = 'Unable to load chat. Please check your internet connection.';
-        this.isLoading = false;
-      });
+      this.checkSiteAvailability();
     }
   }
 
-  updateOnlineStatus(isOnline: boolean) {
+  updateOnlineStatus(isOnline: boolean): void {
     this.isOnline = isOnline;
     this.isLoading = false;
     this.showIframe = false;
@@ -44,42 +37,56 @@ export class HomePage implements OnInit {
     }
   }
 
-  async checkSiteAvailability() {
+  checkSiteAvailability(): void {
     console.log('Checking site availability...');
     this.isLoading = true;
     this.isLoaded = false;
     this.errorMessage = null;
 
-    try {
-      // Use fetch with a timeout to check site availability
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5-second timeout
-      const response = await fetch('https://quickhelp.com.ng/chat.php', {
-        method: 'HEAD', // Lightweight request
-        signal: controller.signal,
-      });
+    const iframe: HTMLIFrameElement = document.createElement('iframe');
+    iframe.src = 'https://quickhelp.com.ng/chat.php';
+    iframe.style.display = 'none';
 
-      clearTimeout(timeoutId);
-      if (response.ok) {
-        this.isLoaded = true;
+    const timeoutId = setTimeout(() => {
+      if (!this.isLoaded) {
+        console.log('Iframe check timed out');
+        this.errorMessage = 'Unable to load chat. Please check your internet connection.';
         this.isLoading = false;
-      } else {
-        this.errorMessage = 'Unable to load chat. Please try again.';
-        this.isLoading = false;
+        if (iframe.parentNode) {
+          document.body.removeChild(iframe);
+        }
       }
-    } catch (error) {
-      console.error('Site availability check failed:', error);
+    }, 5000); // 5-second timeout
+
+    iframe.onload = () => {
+      console.log('Iframe loaded successfully');
+      clearTimeout(timeoutId);
+      this.isLoaded = true;
+      this.isLoading = false;
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe);
+      }
+    };
+
+    iframe.onerror = () => {
+      console.log('Iframe failed to load');
+      clearTimeout(timeoutId);
       this.errorMessage = 'Unable to load chat. Please check your internet connection.';
       this.isLoading = false;
-    }
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe);
+      }
+    };
+
+    document.body.appendChild(iframe);
   }
 
-  showChat() {
+  showChat(): void {
     this.showIframe = true;
     this.errorMessage = null;
   }
 
-  retryConnection() {
+  retryConnection(): void {
     this.isOnline = navigator.onLine;
     if (this.isOnline) {
       this.checkSiteAvailability();
