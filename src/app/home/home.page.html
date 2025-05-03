@@ -1,7 +1,11 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>QuickHelp</ion-title>
-    <ion-toggle slot="end" [(ngModel)]="isChatEnabled" (ionChange)="onToggleChange()"></ion-toggle>
+    <ion-buttons slot="end">
+      <ion-button (click)="closeApp()">
+        <ion-icon name="power-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-content [fullscreen]="true">
@@ -13,15 +17,8 @@
     <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
   </div>
 
-  <!-- Chat Disabled State -->
-  <div class="offline-container" *ngIf="isOnline && !isChatEnabled">
-    <ion-icon name="chatbubble-outline" class="offline-icon"></ion-icon>
-    <h1>Chat Disabled</h1>
-    <p>Enable the chat using the toggle in the top bar.</p>
-  </div>
-
   <!-- Website Offline Notice -->
-  <div class="offline-container" *ngIf="isOnline && isChatEnabled && !isWebsiteAvailable">
+  <div class="offline-container" *ngIf="isOnline && !isWebsiteAvailable">
     <ion-icon name="cloud-offline-outline" class="offline-icon"></ion-icon>
     <h1>Website Unavailable</h1>
     <p>The QuickHelp chat service is currently offline. Please try again later.</p>
@@ -29,7 +26,7 @@
   </div>
 
   <!-- Iframe with Spinner -->
-  <div class="iframe-container" *ngIf="isOnline && isChatEnabled && isWebsiteAvailable">
+  <div class="iframe-container" *ngIf="isOnline && isWebsiteAvailable">
     <ion-spinner *ngIf="isLoading"></ion-spinner>
     <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
     <iframe
