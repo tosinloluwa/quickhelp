@@ -1,13 +1,26 @@
-<ion-header [translucent]="true"></ion-header>
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>QuickHelp</ion-title>
+  </ion-toolbar>
+</ion-header>
 <ion-content [fullscreen]="true">
+  <!-- Offline Landing Page -->
+  <div class="offline-container" *ngIf="!isOnline">
+    <ion-icon name="wifi-outline" class="offline-icon"></ion-icon>
+    <h1>No Internet Connection</h1>
+    <p>Please check your network settings and try again.</p>
+    <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
+  </div>
 
-  <div id="container" *ngIf="!showIframe && !errorMessage">
-   <ion-spinner *ngIf="isLoading"></ion-spinner>   
-    
-    <ion-button >Loading..</ion-button>
+  <!-- Existing Loading/Error/Iframe Content -->
+  <div id="container" *ngIf="isOnline && !showIframe && !errorMessage">
+    <ion-spinner *ngIf="isLoading"></ion-spinner>
+    <ion-button (click)="showChat()" *ngIf="!isLoading">Load Chat</ion-button>
     <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
   </div>
-  <div class="iframe-container" >
+
+  <!-- Iframe for Chat -->
+  <div class="iframe-container" *ngIf="isOnline && showIframe">
     <iframe
       title="QuickHelp"
       allow="encrypted-media; allow-same-origin; allow-scripts"
