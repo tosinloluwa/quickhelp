@@ -10,96 +10,52 @@ import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, Ion
   imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon, IonButtons],
 })
 export class HomePage implements OnInit {
-  isLoading: boolean = false;
-  isLoaded: boolean = false;
+  isLoading: boolean = true;
   showIframe: boolean = false;
-  errorMessage: string | null = null;
   isOnline: boolean = navigator.onLine;
 
   constructor() {}
 
   ngOnInit(): void {
+    console.log('ngOnInit: isOnline =', this.isOnline);
     // Monitor network status
     window.addEventListener('online', () => this.updateOnlineStatus(true));
     window.addEventListener('offline', () => this.updateOnlineStatus(false));
-    if (this.isOnline) {
-      this.checkSiteAvailability();
-    }
+    // Force initial content after a short delay
+    setTimeout(() => {
+      this.isLoading = false;
+      console.log('Initial loading complete: isOnline =', this.isOnline);
+    }, 2000); // 2-second initial delay
   }
 
   updateOnlineStatus(isOnline: boolean): void {
     this.isOnline = isOnline;
     this.isLoading = false;
     this.showIframe = false;
-    this.errorMessage = null;
-    if (this.isOnline) {
-      this.checkSiteAvailability();
-    }
-  }
-
-  checkSiteAvailability(): void {
-    console.log('Checking site availability...');
-    this.isLoading = true;
-    this.isLoaded = false;
-    this.errorMessage = null;
-
-    const iframe: HTMLIFrameElement = document.createElement('iframe');
-    iframe.src = 'https://quickhelp.com.ng/chat.php';
-    iframe.style.display = 'none';
-
-    const timeoutId = setTimeout(() => {
-      if (!this.isLoaded) {
-        console.log('Iframe check timed out');
-        this.errorMessage = 'Unable to load chat. Please check your internet connection.';
-        this.isLoading = false;
-        if (iframe.parentNode) {
-          document.body.removeChild(iframe);
-        }
-      }
-    }, 5000); // 5-second timeout
-
-    iframe.onload = () => {
-      console.log('Iframe loaded successfully');
-      clearTimeout(timeoutId);
-      this.isLoaded = true;
-      this.isLoading = false;
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-    };
-
-    iframe.onerror = () => {
-      console.log('Iframe failed to load');
-      clearTimeout(timeoutId);
-      this.errorMessage = 'Unable to load chat. Please check your internet connection.';
-      this.isLoading = false;
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-    };
-
-    document.body.appendChild(iframe);
+    console.log('Network status updated: isOnline =', this.isOnline);
   }
 
   showChat(): void {
     this.showIframe = true;
-    this.errorMessage = null;
+    console.log('showChat: Showing iframe');
   }
 
   retryConnection(): void {
     this.isOnline = navigator.onLine;
-    if (this.isOnline) {
-      this.checkSiteAvailability();
-    }
+    this.isLoading = true;
+    console.log('retryConnection: isOnline =', this.isOnline);
+    setTimeout(() => {
+      this.isLoading = false;
+      console.log('Retry loading complete: isOnline =', this.isOnline);
+    }, 2000); // 2-second retry delay
   }
 
   closeApp(): void {
-    // Check if running in Cordova environment
+    console.log('closeApp: Attempting to close app');
     if ((window as any).navigator && (window as any).navigator.app) {
       (window as any).navigator.app.exitApp();
     } else {
-      console.log('App close not supported in browser');
-      // Optional: Alert for browser testing
+      console.log('closeApp: Not in Cordova environment');
       window.alert('App close is only supported on mobile devices.');
     }
   }
