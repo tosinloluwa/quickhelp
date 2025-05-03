@@ -12,21 +12,17 @@
     <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
   </div>
 
-  <!-- Existing Loading/Error/Iframe Content -->
-  <div id="container" *ngIf="isOnline && !showIframe && !errorMessage">
+  <!-- Iframe with Spinner or Error -->
+  <div class="iframe-container" *ngIf="isOnline">
     <ion-spinner *ngIf="isLoading"></ion-spinner>
-    <ion-button (click)="showChat()" *ngIf="!isLoading">Load Chat</ion-button>
     <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
-  </div>
-
-  <!-- Iframe for Chat -->
-  <div class="iframe-container" *ngIf="isOnline && showIframe">
     <iframe
       title="QuickHelp"
       allow="encrypted-media; allow-same-origin; allow-scripts"
       src="https://quickhelp.com.ng/chat.php"
       style="width: 100%; height: 100%;"
+      (load)="onIframeLoad()"
+      (error)="onIframeError()"
     ></iframe>
-    <div class="camo">QuickHelp</div>
   </div>
 </ion-content>
