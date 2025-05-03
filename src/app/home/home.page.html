@@ -3,13 +3,13 @@
     <ion-title>QuickHelp</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="closeApp()">
-        <ion-icon name="power-outline"></ion-icon>
+        <ion-icon name="close-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 <ion-content [fullscreen]="true">
-  <!-- Network Offline Page -->
+  <!-- Offline Landing Page -->
   <div class="offline-container" *ngIf="!isOnline">
     <ion-icon name="wifi-outline" class="offline-icon"></ion-icon>
     <h1>No Internet Connection</h1>
@@ -17,25 +17,21 @@
     <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
   </div>
 
-  <!-- Website Offline Notice -->
-  <div class="offline-container" *ngIf="isOnline && !isWebsiteAvailable">
-    <ion-icon name="cloud-offline-outline" class="offline-icon"></ion-icon>
-    <h1>Website Unavailable</h1>
-    <p>The QuickHelp chat service is currently offline. Please try again later.</p>
-    <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
+  <!-- Existing Loading/Error/Iframe Content -->
+  <div id="container" *ngIf="isOnline && !showIframe && !errorMessage">
+    <ion-spinner *ngIf="isLoading"></ion-spinner>
+    <ion-button (click)="showChat()" *ngIf="!isLoading">Load Chat</ion-button>
+    <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
   </div>
 
-  <!-- Iframe with Spinner -->
-  <div class="iframe-container" *ngIf="isOnline && isWebsiteAvailable">
-    <ion-spinner *ngIf="isLoading"></ion-spinner>
-    <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
+  <!-- Iframe for Chat -->
+  <div class="iframe-container" *ngIf="isOnline && showIframe">
     <iframe
       title="QuickHelp"
       allow="encrypted-media; allow-same-origin; allow-scripts"
       src="https://quickhelp.com.ng/chat.php"
       style="width: 100%; height: 100%;"
-      (load)="onIframeLoad()"
-      (error)="onIframeError()"
     ></iframe>
+    <div class="camo">QuickHelp</div>
   </div>
 </ion-content>
