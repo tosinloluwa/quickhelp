@@ -3,7 +3,7 @@
     <ion-title>QuickHelp</ion-title>
     <ion-buttons slot="end">
       <ion-button (click)="closeApp()">
-        <ion-icon name="close-outline"></ion-icon>
+        <ion-icon name="close-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -17,11 +17,10 @@
     <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
   </div>
 
-  <!-- Existing Loading/Error/Iframe Content -->
-  <div id="container" *ngIf="isOnline && !showIframe && !errorMessage">
+  <!-- Loading Spinner or Chat Button -->
+  <div id="container" *ngIf="isOnline && !showIframe">
     <ion-spinner *ngIf="isLoading"></ion-spinner>
     <ion-button (click)="showChat()" *ngIf="!isLoading">Load Chat</ion-button>
-    <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
   </div>
 
   <!-- Iframe for Chat -->
