@@ -1,3 +1,19 @@
+ion-header {
+  --background: transparent;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.logo-container img {
+  width: 200px;
+  height: 100px;
+  object-fit: contain;
+}
+
 .landing-page {
   position: absolute;
   top: 0;
@@ -9,6 +25,16 @@
   justify-content: center;
   align-items: center;
   background-color: #f0f0f0;
+}
+
+.avatar-container {
+  margin-bottom: 20px;
+}
+
+.avatar-container img {
+  width: 150px;
+  height: 200px;
+  object-fit: contain;
 }
 
 .welcome-message {
