@@ -1,13 +1,11 @@
 <ion-header [translucent]="true"></ion-header>
 <ion-content [fullscreen]="true">
-
-  <div id="container" *ngIf="!showIframe && !errorMessage">
-   <ion-spinner *ngIf="isLoading"></ion-spinner>   
-    
-    <ion-button >Loading..</ion-button>
+  <div id="container" *ngIf="!showIframe && !errorMessage && !isOffline">
+    <ion-spinner *ngIf="isLoading"></ion-spinner>   
+    <ion-button (click)="showChat()">Loading..</ion-button>
     <ion-text *ngIf="errorMessage">{{ errorMessage }}</ion-text>
   </div>
-  <div class="iframe-container" >
+  <div class="iframe-container" *ngIf="showIframe && !isOffline">
     <iframe
       title="QuickHelp"
       allow="encrypted-media; allow-same-origin; allow-scripts"
@@ -15,5 +13,12 @@
       style="width: 100%; height: 100%;"
     ></iframe>
     <div class="camo">QuickHelp</div>
+  </div>
+  <div class="offline-notice" *ngIf="isOffline">
+    <ion-text class="offline-message">No internet connection. Please check your network and try again.</ion-text>
+    <div class="button-container">
+      <ion-button color="danger" (click)="exitApp()">Exit App</ion-button>
+      <ion-button color="primary" (click)="retryConnection()">Retry</ion-button>
+    </div>
   </div>
 </ion-content>
