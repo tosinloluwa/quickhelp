@@ -1,13 +1,10 @@
 <ion-header [translucent]="true"></ion-header>
 <ion-content [fullscreen]="true">
-  <div class="loader-container" *ngIf="isOffline || (isLoading && !isLoaded)">
-    <ion-spinner *ngIf="isLoading && !isOffline"></ion-spinner>
-    <ion-text *ngIf="isOffline" class="offline-message">
-      Kindly wait as I am trying to find a way to connect to the internet
-    </ion-text>
-    <ion-button *ngIf="isOffline" color="primary" (click)="retryConnection()">Try Again</ion-button>
+  <div class="landing-page" *ngIf="!isIframeActive">
+    <ion-text class="welcome-message">Welcome to QuickHelp</ion-text>
+    <ion-button color="primary" (click)="loadIframe()">Connect to Chat</ion-button>
   </div>
-  <div class="iframe-container" *ngIf="isLoaded && !isOffline">
+  <div class="iframe-container" *ngIf="isIframeActive && !isOffline">
     <iframe
       #chatIframe
       title="QuickHelp"
@@ -18,5 +15,11 @@
       (error)="onIframeError()"
     ></iframe>
     <div class="camo">QuickHelp</div>
+  </div>
+  <div class="loader-container" *ngIf="isOffline">
+    <ion-text class="offline-message">
+      Kindly wait as I am trying to find a way to connect to the internet
+    </ion-text>
+    <ion-button color="primary" (click)="retryConnection()">Try Again</ion-button>
   </div>
 </ion-content>
