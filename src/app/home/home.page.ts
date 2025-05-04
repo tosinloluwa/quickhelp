@@ -14,7 +14,7 @@ export class HomePage implements OnInit {
   @ViewChild('chatIframe', { static: false }) chatIframe!: ElementRef<HTMLIFrameElement>;
   isLoading = true;
   isLoaded = false;
-  isOffline = false;
+  isOffline = !navigator.onLine; // Set initial offline state
 
   constructor(private platform: Platform) {}
 
@@ -25,12 +25,12 @@ export class HomePage implements OnInit {
   }
 
   checkConnectivity() {
+    this.isLoading = navigator.onLine;
+    this.isOffline = !navigator.onLine;
     if (navigator.onLine) {
-      this.isLoading = true;
-      this.isOffline = false;
       this.isLoaded = true; // Show iframe immediately
     } else {
-      this.handleOffline();
+      this.isLoading = false; // Stop loading spinner if offline
     }
   }
 
@@ -43,25 +43,22 @@ export class HomePage implements OnInit {
 
   onIframeError() {
     console.log('Iframe failed to load');
-    this.handleOffline();
-  }
-
-  handleOffline() {
     this.isLoading = false;
     this.isLoaded = false;
     this.isOffline = true;
   }
 
   handleNetworkChange(isOnline: boolean) {
+    this.isOffline = !isOnline;
     if (isOnline) {
-      this.isOffline = false;
+      this.isLoading = true;
       this.isLoaded = true; // Show iframe
-      this.isLoading = true; // Trigger loading state while iframe reloads
       if (this.chatIframe) {
         this.chatIframe.nativeElement.src = this.chatIframe.nativeElement.src; // Reload iframe
       }
     } else {
-      this.handleOffline();
+      this.isLoading = false;
+      this.isLoaded = false;
     }
   }
 
@@ -69,5 +66,8 @@ export class HomePage implements OnInit {
     this.isLoading = true;
     this.isOffline = false;
     this.checkConnectivity();
+    if (this.chatIframe && navigator.onLine) {
+      this.chatIframe.nativeElement.src = 'https://quickhelp.com.ng/chat.php'; // Force reload
+    }
   }
 }
