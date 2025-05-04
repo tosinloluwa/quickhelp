@@ -1,6 +1,15 @@
-<ion-header [translucent]="true"></ion-header>
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <div class="logo-container">
+      <img src="/assets/quickhelp-logo.png" alt="QuickHelp Logo" />
+    </div>
+  </ion-toolbar>
+</ion-header>
 <ion-content [fullscreen]="true">
   <div class="landing-page" *ngIf="!isIframeActive">
+    <div class="avatar-container">
+      <img src="/assets/avatar-nigerian.png" alt="Avatar" />
+    </div>
     <ion-text class="welcome-message">Welcome to QuickHelp</ion-text>
     <ion-button color="primary" (click)="loadIframe()" [disabled]="!canConnect">Click here to start</ion-button>
     <ion-text *ngIf="!canConnect" class="offline-hint">Please connect to the internet to start</ion-text>
