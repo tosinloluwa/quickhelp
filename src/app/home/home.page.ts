@@ -29,10 +29,9 @@ export class HomePage implements OnInit {
 
   async checkSiteConnectivity() {
     try {
-      // Use a HEAD request to check if the site is reachable
       const response = await fetch('https://quickhelp.com.ng/chat.php', {
         method: 'HEAD',
-        mode: 'no-cors', // Use no-cors to avoid CORS issues in WebView
+        mode: 'no-cors',
       });
       this.canConnect = true;
       this.isOffline = false;
@@ -42,7 +41,6 @@ export class HomePage implements OnInit {
       this.isOffline = true;
     }
 
-    // If iframe is active but we can't connect, reset to landing page
     if (this.isIframeActive && !this.canConnect) {
       this.isIframeActive = false;
     }
