@@ -13,34 +13,43 @@ import { Platform } from '@ionic/angular';
 export class HomePage implements OnInit {
   @ViewChild('chatIframe', { static: false }) chatIframe!: ElementRef<HTMLIFrameElement>;
   isIframeActive = false;
-  isOffline = !navigator.onLine;
-  isOnline = navigator.onLine;
+  isOffline = false;
+  canConnect = false;
 
   constructor(private platform: Platform) {}
 
   ngOnInit() {
-    this.updateConnectivityStatus();
-    window.addEventListener('online', () => this.updateConnectivityStatus());
-    window.addEventListener('offline', () => this.updateConnectivityStatus());
+    this.checkSiteConnectivity();
+    window.addEventListener('online', () => this.checkSiteConnectivity());
+    window.addEventListener('offline', () => this.handleNetworkChange(false));
 
     // Continuously check connectivity every 5 seconds
-    setInterval(() => this.updateConnectivityStatus(), 5000);
+    setInterval(() => this.checkSiteConnectivity(), 5000);
   }
 
-  updateConnectivityStatus() {
-    const wasOffline = this.isOffline;
-    this.isOnline = navigator.onLine;
-    this.isOffline = !this.isOnline;
+  async checkSiteConnectivity() {
+    try {
+      // Use a HEAD request to check if the site is reachable
+      const response = await fetch('https://quickhelp.com.ng/chat.php', {
+        method: 'HEAD',
+        mode: 'no-cors', // Use no-cors to avoid CORS issues in WebView
+      });
+      this.canConnect = true;
+      this.isOffline = false;
+    } catch (error) {
+      console.log('Failed to connect to QuickHelp:', error);
+      this.canConnect = false;
+      this.isOffline = true;
+    }
 
-    if (!this.isOnline && this.isIframeActive) {
-      this.isIframeActive = false; // Reset to landing page if offline
-    } else if (this.isOnline && wasOffline && this.isIframeActive) {
-      this.isIframeActive = false; // Reset to landing page on reconnect
+    // If iframe is active but we can't connect, reset to landing page
+    if (this.isIframeActive && !this.canConnect) {
+      this.isIframeActive = false;
     }
   }
 
   loadIframe() {
-    if (this.isOnline) {
+    if (this.canConnect) {
       this.isIframeActive = true;
       this.isOffline = false;
     }
@@ -55,10 +64,23 @@ export class HomePage implements OnInit {
     console.log('Iframe failed to load');
     this.isIframeActive = false;
     this.isOffline = true;
+    this.canConnect = false;
+  }
+
+  handleNetworkChange(isOnline: boolean) {
+    if (!isOnline) {
+      this.canConnect = false;
+      this.isOffline = true;
+      this.isIframeActive = false;
+    }
+    this.checkSiteConnectivity();
   }
 
   retryConnection() {
-    this.isIframeActive = false; // Reset to landing page
-    this.updateConnectivityStatus();
+    this.isIframeActive = false;
+    this.checkSiteConnectivity();
+    if (this.chatIframe && this.canConnect) {
+      this.chatIframe.nativeElement.src = 'https://quickhelp.com.ng/chat.php';
+    }
   }
 }
