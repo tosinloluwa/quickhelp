@@ -8,11 +8,11 @@
 }
 
 .image-overlay {
-  position: relative; /* Position relative to the container */
-  top: -50px; /* Adjust this value as needed to position the image above the button */
+  position: relative;
+  top: -50px;
   width: 100%;
-  z-index: 2; /* Ensure the image is above other elements */
-  cursor: pointer; /* Add pointer cursor to indicate it's clickable */
+  z-index: 2;
+  cursor: pointer;
 }
 
 #container strong {
@@ -63,4 +63,30 @@
   z-index: 2;
   border: none;
   background: transparent;
+}
+
+.offline-notice {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+}
+
+.offline-message {
+  color: white;
+  font-size: 18px;
+  text-align: center;
+  margin: 0 20px 20px;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px;
 }
