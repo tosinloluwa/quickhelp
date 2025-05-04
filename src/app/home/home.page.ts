@@ -14,20 +14,35 @@ export class HomePage implements OnInit {
   @ViewChild('chatIframe', { static: false }) chatIframe!: ElementRef<HTMLIFrameElement>;
   isIframeActive = false;
   isOffline = !navigator.onLine;
+  isOnline = navigator.onLine;
 
   constructor(private platform: Platform) {}
 
   ngOnInit() {
-    window.addEventListener('online', () => this.handleNetworkChange(true));
-    window.addEventListener('offline', () => this.handleNetworkChange(false));
+    this.updateConnectivityStatus();
+    window.addEventListener('online', () => this.updateConnectivityStatus());
+    window.addEventListener('offline', () => this.updateConnectivityStatus());
+
+    // Continuously check connectivity every 5 seconds
+    setInterval(() => this.updateConnectivityStatus(), 5000);
+  }
+
+  updateConnectivityStatus() {
+    const wasOffline = this.isOffline;
+    this.isOnline = navigator.onLine;
+    this.isOffline = !this.isOnline;
+
+    if (!this.isOnline && this.isIframeActive) {
+      this.isIframeActive = false; // Reset to landing page if offline
+    } else if (this.isOnline && wasOffline && this.isIframeActive) {
+      this.isIframeActive = false; // Reset to landing page on reconnect
+    }
   }
 
   loadIframe() {
-    if (navigator.onLine) {
+    if (this.isOnline) {
       this.isIframeActive = true;
       this.isOffline = false;
-    } else {
-      this.isOffline = true;
     }
   }
 
@@ -42,17 +57,8 @@ export class HomePage implements OnInit {
     this.isOffline = true;
   }
 
-  handleNetworkChange(isOnline: boolean) {
-    this.isOffline = !isOnline;
-    if (this.isIframeActive && !isOnline) {
-      this.isIframeActive = false;
-    }
-  }
-
   retryConnection() {
-    this.loadIframe();
-    if (this.chatIframe && navigator.onLine) {
-      this.chatIframe.nativeElement.src = 'https://quickhelp.com.ng/chat.php';
-    }
+    this.isIframeActive = false; // Reset to landing page
+    this.updateConnectivityStatus();
   }
 }
