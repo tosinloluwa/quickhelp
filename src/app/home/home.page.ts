@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText } from '@ionic/angular/standalone';
 import { Platform } from '@ionic/angular';
@@ -11,6 +11,7 @@ import { Platform } from '@ionic/angular';
   imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText],
 })
 export class HomePage implements OnInit {
+  @ViewChild('chatIframe', { static: false }) chatIframe!: ElementRef<HTMLIFrameElement>;
   isLoading = true;
   isLoaded = false;
   isOffline = false;
@@ -25,37 +26,24 @@ export class HomePage implements OnInit {
 
   checkConnectivity() {
     if (navigator.onLine) {
-      this.loadIframe();
+      this.isLoading = true;
+      this.isOffline = false;
+      this.isLoaded = true; // Show iframe immediately
     } else {
       this.handleOffline();
     }
   }
 
-  loadIframe() {
-    const iframe = document.createElement('iframe');
-    iframe.src = 'https://quickhelp.com.ng/chat.php';
-    iframe.style.display = 'none';
+  onIframeLoad() {
+    console.log('Iframe loaded successfully');
+    this.isLoading = false;
+    this.isLoaded = true;
+    this.isOffline = false;
+  }
 
-    iframe.onload = () => {
-      console.log('Iframe loaded successfully');
-      this.isLoading = false;
-      this.isLoaded = true;
-      this.isOffline = false;
-      document.body.removeChild(iframe);
-    };
-
-    iframe.onerror = () => {
-      console.log('Iframe failed to load');
-      this.handleOffline();
-      document.body.removeChild(iframe);
-    };
-
-    document.body.appendChild(iframe);
-    setTimeout(() => {
-      if (document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
-    }, 5000);
+  onIframeError() {
+    console.log('Iframe failed to load');
+    this.handleOffline();
   }
 
   handleOffline() {
@@ -67,7 +55,11 @@ export class HomePage implements OnInit {
   handleNetworkChange(isOnline: boolean) {
     if (isOnline) {
       this.isOffline = false;
-      this.loadIframe();
+      this.isLoaded = true; // Show iframe
+      this.isLoading = true; // Trigger loading state while iframe reloads
+      if (this.chatIframe) {
+        this.chatIframe.nativeElement.src = this.chatIframe.nativeElement.src; // Reload iframe
+      }
     } else {
       this.handleOffline();
     }
