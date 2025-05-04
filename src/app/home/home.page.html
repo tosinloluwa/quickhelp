@@ -2,8 +2,8 @@
 <ion-content [fullscreen]="true">
   <div class="landing-page" *ngIf="!isIframeActive">
     <ion-text class="welcome-message">Welcome to QuickHelp</ion-text>
-    <ion-button color="primary" (click)="loadIframe()" [disabled]="!isOnline">Click here to start</ion-button>
-    <ion-text *ngIf="!isOnline" class="offline-hint">Please connect to the internet to start</ion-text>
+    <ion-button color="primary" (click)="loadIframe()" [disabled]="!canConnect">Click here to start</ion-button>
+    <ion-text *ngIf="!canConnect" class="offline-hint">Please connect to the internet to start</ion-text>
   </div>
   <div class="iframe-container" *ngIf="isIframeActive && !isOffline">
     <iframe
