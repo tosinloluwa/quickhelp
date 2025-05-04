@@ -9,10 +9,13 @@
   </div>
   <div class="iframe-container" *ngIf="isLoaded && !isOffline">
     <iframe
+      #chatIframe
       title="QuickHelp"
       allow="encrypted-media; allow-same-origin; allow-scripts"
       src="https://quickhelp.com.ng/chat.php"
       style="width: 100%; height: 100%;"
+      (load)="onIframeLoad()"
+      (error)="onIframeError()"
     ></iframe>
     <div class="camo">QuickHelp</div>
   </div>
