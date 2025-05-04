@@ -12,62 +12,47 @@ import { Platform } from '@ionic/angular';
 })
 export class HomePage implements OnInit {
   @ViewChild('chatIframe', { static: false }) chatIframe!: ElementRef<HTMLIFrameElement>;
-  isLoading = true;
-  isLoaded = false;
-  isOffline = !navigator.onLine; // Set initial offline state
+  isIframeActive = false;
+  isOffline = !navigator.onLine;
 
   constructor(private platform: Platform) {}
 
   ngOnInit() {
-    this.checkConnectivity();
     window.addEventListener('online', () => this.handleNetworkChange(true));
     window.addEventListener('offline', () => this.handleNetworkChange(false));
   }
 
-  checkConnectivity() {
-    this.isLoading = navigator.onLine;
-    this.isOffline = !navigator.onLine;
+  loadIframe() {
     if (navigator.onLine) {
-      this.isLoaded = true; // Show iframe immediately
+      this.isIframeActive = true;
+      this.isOffline = false;
     } else {
-      this.isLoading = false; // Stop loading spinner if offline
+      this.isOffline = true;
     }
   }
 
   onIframeLoad() {
     console.log('Iframe loaded successfully');
-    this.isLoading = false;
-    this.isLoaded = true;
     this.isOffline = false;
   }
 
   onIframeError() {
     console.log('Iframe failed to load');
-    this.isLoading = false;
-    this.isLoaded = false;
+    this.isIframeActive = false;
     this.isOffline = true;
   }
 
   handleNetworkChange(isOnline: boolean) {
     this.isOffline = !isOnline;
-    if (isOnline) {
-      this.isLoading = true;
-      this.isLoaded = true; // Show iframe
-      if (this.chatIframe) {
-        this.chatIframe.nativeElement.src = this.chatIframe.nativeElement.src; // Reload iframe
-      }
-    } else {
-      this.isLoading = false;
-      this.isLoaded = false;
+    if (this.isIframeActive && !isOnline) {
+      this.isIframeActive = false;
     }
   }
 
   retryConnection() {
-    this.isLoading = true;
-    this.isOffline = false;
-    this.checkConnectivity();
+    this.loadIframe();
     if (this.chatIframe && navigator.onLine) {
-      this.chatIframe.nativeElement.src = 'https://quickhelp.com.ng/chat.php'; // Force reload
+      this.chatIframe.nativeElement.src = 'https://quickhelp.com.ng/chat.php';
     }
   }
 }
