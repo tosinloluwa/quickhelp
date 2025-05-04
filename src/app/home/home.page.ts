@@ -13,35 +13,34 @@ import { Platform } from '@ionic/angular';
 export class HomePage implements OnInit {
   isLoading = true;
   isLoaded = false;
-  showIframe = false;
-  errorMessage: string | null = null;
   isOffline = false;
 
   constructor(private platform: Platform) {}
 
   ngOnInit() {
-    this.checkSiteAvailability();
+    this.checkConnectivity();
     window.addEventListener('online', () => this.handleNetworkChange(true));
     window.addEventListener('offline', () => this.handleNetworkChange(false));
   }
 
-  checkSiteAvailability() {
-    console.log('Checking site availability...');
-    if (!navigator.onLine) {
+  checkConnectivity() {
+    if (navigator.onLine) {
+      this.loadIframe();
+    } else {
       this.handleOffline();
-      return;
     }
+  }
 
+  loadIframe() {
     const iframe = document.createElement('iframe');
     iframe.src = 'https://quickhelp.com.ng/chat.php';
     iframe.style.display = 'none';
 
     iframe.onload = () => {
       console.log('Iframe loaded successfully');
-      this.isLoaded = true;
       this.isLoading = false;
+      this.isLoaded = true;
       this.isOffline = false;
-      this.showIframe = true;
       document.body.removeChild(iframe);
     };
 
@@ -60,42 +59,23 @@ export class HomePage implements OnInit {
   }
 
   handleOffline() {
-    this.isOffline = true;
     this.isLoading = false;
-    this.errorMessage = null;
-    this.showIframe = false;
+    this.isLoaded = false;
+    this.isOffline = true;
   }
 
   handleNetworkChange(isOnline: boolean) {
     if (isOnline) {
       this.isOffline = false;
-      this.checkSiteAvailability();
+      this.loadIframe();
     } else {
       this.handleOffline();
     }
-  }
-
-  showChat() {
-    if (!navigator.onLine) {
-      this.handleOffline();
-      return;
-    }
-    this.showIframe = true;
-    this.errorMessage = null;
   }
 
   retryConnection() {
     this.isLoading = true;
     this.isOffline = false;
-    this.checkSiteAvailability();
-  }
-
-  exitApp() {
-    if (this.platform.is('cordova')) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (navigator as any).app.exitApp();
-    } else {
-      console.log('Exit app not supported in this environment');
-    }
+    this.checkConnectivity();
   }
 }
