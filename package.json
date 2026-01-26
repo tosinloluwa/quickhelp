@@ -63,6 +63,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "nx": "^19.2.2",
+    "onesignal-cordova-plugin": "^5.2.19",
     "quickhelp_nigeria": "file:android",
     "typescript": "~5.2.2"
   },
@@ -74,7 +75,8 @@
       "cordova-plugin-ionic-webview": {},
       "cordova-plugin-ionic-keyboard": {},
       "cordova-plugin-splashscreen": {},
-      "cordova-plugin-dialogs": {}
+      "cordova-plugin-dialogs": {},
+      "onesignal-cordova-plugin": {}
     },
     "platforms": [
       "android"

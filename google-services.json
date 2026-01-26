@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1090479051777",
+    "project_id": "quickhelp-nigeria",
+    "storage_bucket": "quickhelp-nigeria.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1090479051777:android:f930797d0957a1ba715c00",
+        "android_client_info": {
+          "package_name": "com.quickhelpnigeria2024.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPvBLYS9xvWNbwUwiT39kf8LUZ4y0y5Uc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
