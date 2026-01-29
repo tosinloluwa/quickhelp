@@ -38,69 +38,105 @@ export class HomePage implements OnInit {
   // ────────────────────────────────────────────────
   // OneSignal Push Integration (native plugin)
   // ────────────────────────────────────────────────
-initOneSignal() {
-  console.log('initOneSignal called - platform ready');
+  initOneSignal() {
+    console.log('initOneSignal called - platform ready');
 
-  if (typeof window.OneSignal === 'undefined') {
-    console.warn('OneSignal plugin NOT available in this environment (browser expected)');
-    return;
-  }
-
-  console.log('OneSignal object found on window');
-
-  try {
-    window.OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
-    console.log('OneSignal.initialize() executed successfully');
-  } catch (err) {
-    console.error('Error during OneSignal.initialize():', err);
-  }
-
-  // Permission prompt
-  window.OneSignal.Notifications.requestPermission((granted: boolean) => {
-    console.log('Permission request callback fired. Granted:', granted);
-    if (granted) {
-      this.getAndSendPlayerId();
-    } else {
-      console.log('Permission was denied or not supported in browser');
+    // In browser (ionic serve), OneSignal won't exist → safe early return
+    if (typeof window.OneSignal === 'undefined') {
+      console.warn('OneSignal plugin NOT available in this environment (browser expected)');
+      return;
     }
-  });
 
-  // Verbose logging (helps see internal OneSignal messages)
-  //window.OneSignal.setLogLevel(6, 0);
-  console.log('OneSignal verbose logging enabled');
+    console.log('OneSignal object found on window');
 
-  // Foreground listener
-  window.OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event: any) => {
-    console.log('Foreground notification event triggered:', event);
-  });
+    try {
+      // Modern init (works with onesignal-cordova-plugin >= 3.x / latest)
+      window.OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
+      console.log('OneSignal.initialize() executed successfully');
+    } catch (err) {
+      console.error('Error during OneSignal.initialize():', err);
+      // Fallback for older plugin versions (uncomment if needed after plugin update)
+      // window.OneSignal.startInit('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
+      // window.OneSignal.endInit();
+      // console.log('Fallback startInit/endInit used');
+    }
 
-  // Click listener
-  window.OneSignal.Notifications.addEventListener('click', (event: any) => {
-    console.log('Notification click event:', event);
-  });
-}
+    // Enable verbose logging for device debugging (comment out after testing)
+    // (window as any).OneSignal.setLogLevel(6, 0);  // TS error safe in browser; works on device
+    console.log('OneSignal verbose logging enabled (if supported)');
+
+    // Request permission
+    try {
+      window.OneSignal.Notifications.requestPermission((granted: boolean) => {
+        console.log('Permission request callback fired. Granted:', granted);
+        if (granted) {
+          this.getAndSendPlayerId();
+        } else {
+          console.log('Permission was denied or not supported');
+        }
+      });
+    } catch (err) {
+      console.error('Error requesting permission:', err);
+    }
+
+    // Foreground notification handler
+    try {
+      window.OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event: any) => {
+        console.log('Foreground notification received:', event);
+        // Optional: Display manually or suppress
+        // event.preventDefault();
+        // event.getNotification().display();
+      });
+    } catch (err) {
+      console.error('Error adding foreground listener:', err);
+    }
+
+    // Notification click handler
+    try {
+      window.OneSignal.Notifications.addEventListener('click', (event: any) => {
+        console.log('Notification clicked:', event);
+        const data = event?.notification?.additionalData || {};
+
+        if (data?.action === 'open_chat' || data?.type === 'ride_request') {
+          console.log('Handling deep link: open chat');
+          this.loadIframe();
+          if (this.chatIframe?.nativeElement) {
+            this.chatIframe.nativeElement.contentWindow?.focus?.();
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Error adding click listener:', err);
+    }
+  }
 
   // Fetch Player ID and send to backend
   private getAndSendPlayerId() {
-    window.OneSignal.User.getOnesignalId()
-      .then((playerId: string | null) => {
-        if (playerId) {
-          console.log('OneSignal Player ID:', playerId);
+    try {
+      window.OneSignal.User.getOnesignalId()
+        .then((playerId: string | null) => {
+          if (playerId) {
+            console.log('OneSignal Player ID:', playerId);
 
-          // Send to your PHP backend
-          this.http.post('https://quickhelp.com.ng/api/save-device.php', {
-            player_id: playerId,
-            // Optional: add user_id, device_info, auth_token if you have login
-            // user_id: this.currentUserId || 'guest',
-          }).subscribe({
-            next: (res) => console.log('Player ID saved on server:', res),
-            error: (err) => console.error('Failed to save Player ID:', err)
-          });
-        }
-      })
-      .catch((err: any) => {
-        console.error('Error getting OneSignal Player ID:', err);
-      });
+            // Send to your PHP backend
+            this.http.post('https://quickhelp.com.ng/api/save-device.php', {
+              player_id: playerId,
+              // Optional: add user_id, device_info, auth_token if you have login
+              // user_id: this.currentUserId || 'guest',
+            }).subscribe({
+              next: (res) => console.log('Player ID saved on server:', res),
+              error: (err) => console.error('Failed to save Player ID:', err)
+            });
+          } else {
+            console.warn('No Player ID returned');
+          }
+        })
+        .catch((err: any) => {
+          console.error('Error getting OneSignal Player ID:', err);
+        });
+    } catch (err) {
+      console.error('Critical error in getAndSendPlayerId:', err);
+    }
   }
 
   // ────────────────────────────────────────────────
