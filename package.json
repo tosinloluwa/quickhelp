@@ -63,7 +63,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "nx": "^19.2.2",
-    "onesignal-cordova-plugin": "^5.2.20",
+    "onesignal-cordova-plugin": "^5.0.0",
     "quickhelp_nigeria": "file:android",
     "typescript": "~5.2.2"
   },
