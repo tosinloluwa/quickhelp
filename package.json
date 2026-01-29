@@ -44,7 +44,7 @@
     "@types/jasmine": "~5.1.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "cordova-android": "^13.0.0",
+    "cordova-android": "^14.0.1",
     "cordova-plugin-device": "2.0.2",
     "cordova-plugin-dialogs": "^2.0.2",
     "cordova-plugin-ionic-keyboard": "^2.0.5",
@@ -63,7 +63,7 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "nx": "^19.2.2",
-    "onesignal-cordova-plugin": "^5.2.19",
+    "onesignal-cordova-plugin": "^5.2.20",
     "quickhelp_nigeria": "file:android",
     "typescript": "~5.2.2"
   },
