@@ -99,55 +99,63 @@ private async getAndSendPlayerId() {
       return;
     }
 
+    console.log('Attempting to fetch Player ID...');
+
     let playerId: string | null = null;
 
-    // Primary v5+ method (bypass TS check)
+    // Method 1: Modern v5+ (primary)
     try {
-      playerId = await (OneSignal.User as any).getOnesignalId();
-      if (playerId) {
-        console.log('Player ID (v5 getOnesignalId):', playerId);
-      }
+      playerId = await OneSignal.User.getOnesignalId();
+      console.log('Method 1 (getOnesignalId) success:', playerId);
     } catch (e) {
-      console.warn('v5 getOnesignalId failed:', e);
+      console.warn('Method 1 failed:', e);
     }
 
-    // Fallback: getDeviceState (bypass TS)
+    // Method 2: getDeviceState (common alternative)
     if (!playerId) {
       try {
-        const deviceState = await (OneSignal.User as any).getDeviceState();
+        const deviceState = await OneSignal.User.getDeviceState();
         playerId = deviceState?.userId || null;
-        if (playerId) {
-          console.log('Player ID (getDeviceState):', playerId);
-        }
+        console.log('Method 2 (getDeviceState) success:', playerId);
       } catch (e) {
-        console.warn('getDeviceState failed:', e);
+        console.warn('Method 2 failed:', e);
       }
     }
 
-    // Legacy fallback (bypass TS)
+    // Method 3: Legacy getIds (callback style)
     if (!playerId) {
       try {
         await new Promise<void>((resolve) => {
-          (OneSignal as any).getIds((ids: { userId: string | null }) => {
+          OneSignal.getIds((ids: any) => {
             playerId = ids?.userId || null;
-            if (playerId) {
-              console.log('Player ID (legacy getIds):', playerId);
-            }
+            console.log('Method 3 (legacy getIds) success:', playerId);
             resolve();
           });
         });
       } catch (e) {
-        console.warn('Legacy getIds failed:', e);
+        console.warn('Method 3 failed:', e);
+      }
+    }
+
+    // Method 4: Fallback to getDeviceState again (some versions)
+    if (!playerId) {
+      try {
+        const state = await OneSignal.getDeviceState();
+        playerId = state?.userId || null;
+        console.log('Method 4 fallback success:', playerId);
+      } catch (e) {
+        console.warn('Method 4 failed:', e);
       }
     }
 
     if (playerId) {
+      console.log('Final Player ID found:', playerId);
       this.sendToBackend(playerId);
     } else {
-      console.warn('No Player ID found after all attempts');
+      console.error('No Player ID found after all attempts');
     }
   } catch (error) {
-    console.error('Critical error fetching Player ID:', error);
+    console.error('Critical error in getAndSendPlayerId:', error);
   }
 }
 
