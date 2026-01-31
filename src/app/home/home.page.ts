@@ -101,20 +101,20 @@ private async getAndSendPlayerId() {
 
     let playerId: string | null = null;
 
-    // Primary: Modern v5+ method
+    // Primary v5+ method (bypass TS check)
     try {
-      playerId = await OneSignal.User.getOnesignalId();
+      playerId = await (OneSignal.User as any).getOnesignalId();
       if (playerId) {
-        console.log('Player ID (getOnesignalId):', playerId);
+        console.log('Player ID (v5 getOnesignalId):', playerId);
       }
     } catch (e) {
-      console.warn('getOnesignalId failed:', e);
+      console.warn('v5 getOnesignalId failed:', e);
     }
 
-    // Fallback 1: getDeviceState (common in some v5 builds)
+    // Fallback: getDeviceState (bypass TS)
     if (!playerId) {
       try {
-        const deviceState = await OneSignal.User.getDeviceState();
+        const deviceState = await (OneSignal.User as any).getDeviceState();
         playerId = deviceState?.userId || null;
         if (playerId) {
           console.log('Player ID (getDeviceState):', playerId);
@@ -124,11 +124,11 @@ private async getAndSendPlayerId() {
       }
     }
 
-    // Fallback 2: Legacy getIds (for older plugin compatibility)
+    // Legacy fallback (bypass TS)
     if (!playerId) {
       try {
         await new Promise<void>((resolve) => {
-          OneSignal.getIds((ids: { userId: string | null }) => {
+          (OneSignal as any).getIds((ids: { userId: string | null }) => {
             playerId = ids?.userId || null;
             if (playerId) {
               console.log('Player ID (legacy getIds):', playerId);
@@ -144,7 +144,7 @@ private async getAndSendPlayerId() {
     if (playerId) {
       this.sendToBackend(playerId);
     } else {
-      console.warn('No Player ID found after all methods');
+      console.warn('No Player ID found after all attempts');
     }
   } catch (error) {
     console.error('Critical error fetching Player ID:', error);
