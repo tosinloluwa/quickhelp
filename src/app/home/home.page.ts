@@ -99,26 +99,55 @@ private async getAndSendPlayerId() {
       return;
     }
 
-    // Type assertion to bypass TS error (safe on device)
-    const playerId = await (OneSignal.User as any).getOnesignalId();
+    let playerId: string | null = null;
+
+    // Primary: Modern v5+ method
+    try {
+      playerId = await OneSignal.User.getOnesignalId();
+      if (playerId) {
+        console.log('Player ID (getOnesignalId):', playerId);
+      }
+    } catch (e) {
+      console.warn('getOnesignalId failed:', e);
+    }
+
+    // Fallback 1: getDeviceState (common in some v5 builds)
+    if (!playerId) {
+      try {
+        const deviceState = await OneSignal.User.getDeviceState();
+        playerId = deviceState?.userId || null;
+        if (playerId) {
+          console.log('Player ID (getDeviceState):', playerId);
+        }
+      } catch (e) {
+        console.warn('getDeviceState failed:', e);
+      }
+    }
+
+    // Fallback 2: Legacy getIds (for older plugin compatibility)
+    if (!playerId) {
+      try {
+        await new Promise<void>((resolve) => {
+          OneSignal.getIds((ids: { userId: string | null }) => {
+            playerId = ids?.userId || null;
+            if (playerId) {
+              console.log('Player ID (legacy getIds):', playerId);
+            }
+            resolve();
+          });
+        });
+      } catch (e) {
+        console.warn('Legacy getIds failed:', e);
+      }
+    }
 
     if (playerId) {
-      console.log('OneSignal Player ID (v5):', playerId);
       this.sendToBackend(playerId);
-      return;
+    } else {
+      console.warn('No Player ID found after all methods');
     }
-
-    // Fallback
-    const deviceState = await (OneSignal.User as any).getDeviceState();
-    if (deviceState?.userId) {
-      console.log('OneSignal Player ID (deviceState):', deviceState.userId);
-      this.sendToBackend(deviceState.userId);
-      return;
-    }
-
-    console.warn('No Player ID found from OneSignal');
   } catch (error) {
-    console.error('Error fetching Player ID:', error);
+    console.error('Critical error fetching Player ID:', error);
   }
 }
 
@@ -130,6 +159,8 @@ private sendToBackend(playerId: string) {
     error: (err) => console.error('Failed to save Player ID:', err)
   });
 }
+
+
 
   // ────────────────────────────────────────────────
   // Your original connectivity / iframe methods (unchanged)
