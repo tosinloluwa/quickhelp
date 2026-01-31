@@ -94,29 +94,35 @@ export class HomePage implements OnInit {
 
 private async getAndSendPlayerId() {
   try {
-    // Only run on native (device/emulator)
-    if (!this.platform.is('hybrid')) {
-      console.log('Skipping Player ID fetch in browser');
+    // Primary method (v5+)
+    const playerId = await OneSignal.User.getOnesignalId();
+    if (playerId) {
+      console.log('OneSignal Player ID (v5):', playerId);
+      this.sendToBackend(playerId);
       return;
     }
 
-    // Type assertion to bypass TS check (safe on device)
-    const playerId = await (OneSignal.User as any).getOnesignalId();
-
-    if (playerId) {
-      console.log('OneSignal Player ID:', playerId);
-      this.http.post('https://quickhelp.com.ng/api/save-device.php', {
-        player_id: playerId
-      }).subscribe({
-        next: (res) => console.log('Player ID saved:', res),
-        error: (err) => console.error('Failed to save Player ID:', err)
-      });
-    } else {
-      console.warn('No Player ID returned');
+    // Fallback if above returns null (some versions)
+    const deviceState = await OneSignal.User.getDeviceState();
+    if (deviceState?.userId) {
+      console.log('OneSignal Player ID (deviceState):', deviceState.userId);
+      this.sendToBackend(deviceState.userId);
+      return;
     }
+
+    console.warn('No Player ID found from OneSignal');
   } catch (error) {
     console.error('Error fetching Player ID:', error);
   }
+}
+
+private sendToBackend(playerId: string) {
+  this.http.post('https://quickhelp.com.ng/api/save-device.php', {
+    player_id: playerId
+  }).subscribe({
+    next: (res) => console.log('Player ID saved on server:', res),
+    error: (err) => console.error('Failed to save Player ID:', err)
+  });
 }
 
   // ────────────────────────────────────────────────
