@@ -1,11 +1,11 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText } from '@ionic/angular/standalone';
 import { Platform, AlertController } from '@ionic/angular'; // Added AlertController
 import { HttpClient } from '@angular/common/http';
 
 // Modern modular import for OneSignal v5+ (cordova plugin)
-import OneSignal from 'onesignal-cordova-plugin';
+import OneSignal from 'onesignal-cordova-plugin'; 
 
 @Component({
   selector: 'app-home',
