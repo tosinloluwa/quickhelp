@@ -92,83 +92,76 @@ export class HomePage implements OnInit {
     }
   }
 
-private async getAndSendPlayerId() {
-  try {
-    if (!this.platform.is('hybrid')) {
-      console.log('Skipping Player ID fetch in browser');
-      return;
-    }
-
-    console.log('Attempting to fetch Player ID...');
-
-    let playerId: string | null = null;
-
-    // Method 1: Modern v5+ (primary)
+  private async getAndSendPlayerId() {
     try {
-      playerId = await OneSignal.User.getOnesignalId();
-      console.log('Method 1 (getOnesignalId) success:', playerId);
-    } catch (e) {
-      console.warn('Method 1 failed:', e);
-    }
+      console.log('Attempting to fetch Player ID...');
 
-    // Method 2: getDeviceState (common alternative)
-    if (!playerId) {
+      let playerId: string | null = null;
+
+      // Primary: Modern v5+ method (bypass TS with type assertion)
       try {
-        const deviceState = await OneSignal.User.getDeviceState();
-        playerId = deviceState?.userId || null;
-        console.log('Method 2 (getDeviceState) success:', playerId);
+        playerId = await (OneSignal.User as any).getOnesignalId();
+        console.log('Method 1 (getOnesignalId) success:', playerId);
       } catch (e) {
-        console.warn('Method 2 failed:', e);
+        console.warn('Method 1 failed:', e);
       }
-    }
 
-    // Method 3: Legacy getIds (callback style)
-    if (!playerId) {
-      try {
-        await new Promise<void>((resolve) => {
-          OneSignal.getIds((ids: any) => {
-            playerId = ids?.userId || null;
-            console.log('Method 3 (legacy getIds) success:', playerId);
-            resolve();
+      // Fallback 1: getDeviceState (bypass TS)
+      if (!playerId) {
+        try {
+          const deviceState = await (OneSignal.User as any).getDeviceState();
+          playerId = deviceState?.userId || null;
+          console.log('Method 2 (getDeviceState) success:', playerId);
+        } catch (e) {
+          console.warn('Method 2 failed:', e);
+        }
+      }
+
+      // Fallback 2: Legacy getIds (callback style, bypass TS)
+      if (!playerId) {
+        try {
+          await new Promise<void>((resolve) => {
+            (OneSignal as any).getIds((ids: { userId: string | null }) => {
+              playerId = ids?.userId || null;
+              console.log('Method 3 (legacy getIds) success:', playerId);
+              resolve();
+            });
           });
-        });
-      } catch (e) {
-        console.warn('Method 3 failed:', e);
+        } catch (e) {
+          console.warn('Method 3 failed:', e);
+        }
       }
-    }
 
-    // Method 4: Fallback to getDeviceState again (some versions)
-    if (!playerId) {
-      try {
-        const state = await OneSignal.getDeviceState();
-        playerId = state?.userId || null;
-        console.log('Method 4 fallback success:', playerId);
-      } catch (e) {
-        console.warn('Method 4 failed:', e);
+      // Fallback 3: Additional getDeviceState (bypass TS)
+      if (!playerId) {
+        try {
+          const state = await (OneSignal as any).getDeviceState();
+          playerId = state?.userId || null;
+          console.log('Method 4 (fallback getDeviceState) success:', playerId);
+        } catch (e) {
+          console.warn('Method 4 failed:', e);
+        }
       }
-    }
 
-    if (playerId) {
-      console.log('Final Player ID found:', playerId);
-      this.sendToBackend(playerId);
-    } else {
-      console.error('No Player ID found after all attempts');
+      if (playerId) {
+        console.log('Final Player ID found:', playerId);
+        this.sendToBackend(playerId);
+      } else {
+        console.error('No Player ID found after all attempts');
+      }
+    } catch (error) {
+      console.error('Critical error in getAndSendPlayerId:', error);
     }
-  } catch (error) {
-    console.error('Critical error in getAndSendPlayerId:', error);
   }
-}
 
-private sendToBackend(playerId: string) {
-  this.http.post('https://quickhelp.com.ng/api/save-device.php', {
-    player_id: playerId
-  }).subscribe({
-    next: (res) => console.log('Player ID saved on server:', res),
-    error: (err) => console.error('Failed to save Player ID:', err)
-  });
-}
-
-
+  private sendToBackend(playerId: string) {
+    this.http.post('https://quickhelp.com.ng/api/save-device.php', {
+      player_id: playerId
+    }).subscribe({
+      next: (res) => console.log('Player ID saved on server:', res),
+      error: (err) => console.error('Failed to save Player ID:', err)
+    });
+  }
 
   // ────────────────────────────────────────────────
   // Your original connectivity / iframe methods (unchanged)
