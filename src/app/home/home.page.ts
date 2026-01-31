@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText } from '@ionic/angular/standalone';
-import { Platform, AlertController } from '@ionic/angular'; // Added AlertController
+import { Platform, AlertController } from '@ionic/angular';
 import { HttpClient } from '@angular/common/http';
 
 // Modern modular import for OneSignal v5+ (cordova plugin)
@@ -24,26 +24,26 @@ export class HomePage implements OnInit {
   constructor(
     private platform: Platform,
     private http: HttpClient,
-    private alertController: AlertController // Injected AlertController
+    private alertController: AlertController
   ) {}
 
-ngOnInit() {
-  this.platform.ready().then(() => {
-    this.initOneSignal();
-    this.checkSiteConnectivity();
-  });
+  ngOnInit() {
+    this.platform.ready().then(() => {
+      this.initOneSignal();
+      this.checkSiteConnectivity();
+    });
 
-  // INSTANT: The phone's OS tells us immediately when signal returns
-  window.addEventListener('online', () => {
-     console.log('OS detected Online - checking immediately');
-     this.retryConnection(); 
-  });
+    // INSTANT: OS notifies when connection returns
+    window.addEventListener('online', () => {
+      console.log('OS detected Online - checking immediately');
+      this.retryConnection(); 
+    });
 
-  window.addEventListener('offline', () => this.handleNetworkChange(false));
+    window.addEventListener('offline', () => this.handleNetworkChange(false));
 
-  // BACKGROUND: Poll every 15 seconds just to keep the status updated
-  setInterval(() => this.checkSiteConnectivity(), 15000);
-}
+    // BACKGROUND: Poll every 15 seconds
+    setInterval(() => this.checkSiteConnectivity(), 15000);
+  }
 
   // ────────────────────────────────────────────────
   // OneSignal Push Integration (Native Plugin v5+)
@@ -61,7 +61,7 @@ ngOnInit() {
       await OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
       console.log('OneSignal initialized successfully');
 
-      // 2. Setup Subscription Listener
+      // 2. Setup Subscription Listener (catches ID when ready)
       (OneSignal.User as any).pushSubscription.addEventListener("change", (event: any) => {
         const newId = event.current.id;
         console.log("Push Subscription Changed. New ID:", newId);
@@ -120,14 +120,14 @@ ngOnInit() {
   }
 
   // ────────────────────────────────────────────────
-  // THE BRILLIANT WAY: Prompt for Phone on "Start"
+  // Prompt for Phone on "Start Chat" button tap
   // ────────────────────────────────────────────────
   async loadIframe() {
     if (!this.canConnect) return;
 
     const savedPhone = localStorage.getItem('userPhone');
 
-    // If we don't have the phone yet, ask for it brilliantly
+    // If no phone saved → prompt user
     if (!savedPhone) {
       const alert = await this.alertController.create({
         header: 'Welcome to QuickHelp!',
@@ -145,20 +145,20 @@ ngOnInit() {
         ],
         buttons: [
           {
-            text: 'Maybe Later',
+            text: 'MAYBE LATER',
             role: 'cancel',
             handler: () => {
               this.proceedToChat();
             }
           },
           {
-            text: 'Start Chat',
+            text: 'START CHAT',
             handler: (data) => {
               if (data.phone && data.phone.length >= 10) {
                 this.saveUserPhone(data.phone);
                 return true;
               }
-              return false; // Don't close if input is invalid
+              return false; // Keep alert open if invalid
             }
           }
         ]
@@ -173,12 +173,14 @@ ngOnInit() {
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
     
-    // Tag in OneSignal dashboard
+    // Tag in OneSignal dashboard (optional but useful)
     try {
       (OneSignal.User as any).addTag("phone_number", phone);
-    } catch (e) { console.error("OneSignal Tagging failed", e); }
+    } catch (e) {
+      console.error("OneSignal Tagging failed", e);
+    }
 
-    // Update DB with the phone number
+    // Update DB with phone number
     if (this.userPlayerId) {
       this.sendToBackend(this.userPlayerId, phone);
     }
@@ -234,22 +236,19 @@ ngOnInit() {
   async retryConnection() {
     console.log('Turbo Retry initiated...');
     
-    // 1. Show immediate visual feedback (optional)
-    this.isOffline = true; 
+    this.isOffline = true;
     
     try {
-      // 2. Await the connectivity check (The "await" is the secret to making it work)
       await this.checkSiteConnectivity();
 
       if (this.canConnect) {
         this.isOffline = false;
         this.isIframeActive = true;
 
-        // 3. Soft Refresh: If the iframe exists, just reload its contents
-        // This is much faster than destroying/re-creating the element
+        // Force reload iframe with cache bust
         if (this.chatIframe?.nativeElement) {
           const iframe = this.chatIframe.nativeElement;
-          iframe.src = 'https://quickhelp.com.ng/chat.php'; 
+          iframe.src = 'https://quickhelp.com.ng/chat.php?' + Date.now();
         }
       } else {
         console.log('Retry failed: Still no connection.');
