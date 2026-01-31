@@ -94,16 +94,22 @@ export class HomePage implements OnInit {
 
 private async getAndSendPlayerId() {
   try {
-    // Primary method (v5+)
-    const playerId = await OneSignal.User.getOnesignalId();
+    if (!this.platform.is('hybrid')) {
+      console.log('Skipping Player ID fetch in browser');
+      return;
+    }
+
+    // Type assertion to bypass TS error (safe on device)
+    const playerId = await (OneSignal.User as any).getOnesignalId();
+
     if (playerId) {
       console.log('OneSignal Player ID (v5):', playerId);
       this.sendToBackend(playerId);
       return;
     }
 
-    // Fallback if above returns null (some versions)
-    const deviceState = await OneSignal.User.getDeviceState();
+    // Fallback
+    const deviceState = await (OneSignal.User as any).getDeviceState();
     if (deviceState?.userId) {
       console.log('OneSignal Player ID (deviceState):', deviceState.userId);
       this.sendToBackend(deviceState.userId);
