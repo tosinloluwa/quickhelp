@@ -4,6 +4,9 @@ import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, Ion
 import { Platform } from '@ionic/angular';
 import { HttpClient } from '@angular/common/http';
 
+// Modern modular import for OneSignal v5+ (cordova plugin)
+import OneSignal from 'onesignal-cordova-plugin';
+
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
@@ -24,8 +27,8 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.platform.ready().then(() => {
-      this.initOneSignal();          // Start push setup here
-      this.checkSiteConnectivity();   // Your original checks
+      this.initOneSignal();          // Start push setup
+      this.checkSiteConnectivity();   // Original checks
     });
 
     window.addEventListener('online', () => this.checkSiteConnectivity());
@@ -36,108 +39,85 @@ export class HomePage implements OnInit {
   }
 
   // ────────────────────────────────────────────────
-  // OneSignal Push Integration (native plugin)
+  // OneSignal Push Integration (Native Plugin v5+)
   // ────────────────────────────────────────────────
-  initOneSignal() {
+  async initOneSignal() {
     console.log('initOneSignal called - platform ready');
 
-    // In browser (ionic serve), OneSignal won't exist → safe early return
-    if (typeof window.OneSignal === 'undefined') {
-      console.warn('OneSignal plugin NOT available in this environment (browser expected)');
+    // Skip in browser / web environment (ionic serve)
+    if (!this.platform.is('hybrid')) {
+      console.warn('OneSignal skipped: Not running on native device (browser mode)');
       return;
     }
 
-    console.log('OneSignal object found on window');
-
     try {
-      // Modern init (works with onesignal-cordova-plugin >= 3.x / latest)
-      window.OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
-      console.log('OneSignal.initialize() executed successfully');
-    } catch (err) {
-      console.error('Error during OneSignal.initialize():', err);
-      // Fallback for older plugin versions (uncomment if needed after plugin update)
-      // window.OneSignal.startInit('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
-      // window.OneSignal.endInit();
-      // console.log('Fallback startInit/endInit used');
-    }
+      // Initialize OneSignal with your App ID
+      await OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
+      console.log('OneSignal initialized successfully');
 
-    // Enable verbose logging for device debugging (comment out after testing)
-    // (window as any).OneSignal.setLogLevel(6, 0);  // TS error safe in browser; works on device
-    console.log('OneSignal verbose logging enabled (if supported)');
+      // Request permission (Promise-based, triggers native prompt)
+      const granted = await OneSignal.Notifications.requestPermission(true);
+      console.log('Notification permission granted:', granted);
 
-    // Request permission
-    try {
-      window.OneSignal.Notifications.requestPermission((granted: boolean) => {
-        console.log('Permission request callback fired. Granted:', granted);
-        if (granted) {
-          this.getAndSendPlayerId();
-        } else {
-          console.log('Permission was denied or not supported');
-        }
-      });
-    } catch (err) {
-      console.error('Error requesting permission:', err);
-    }
+      if (granted) {
+        await this.getAndSendPlayerId();
+      } else {
+        console.log('Permission denied or not supported');
+      }
 
-    // Foreground notification handler
-    try {
-      window.OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event: any) => {
+      // Foreground notification listener
+      OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event: any) => {
         console.log('Foreground notification received:', event);
-        // Optional: Display manually or suppress
+        // Optional: Customize or suppress display
         // event.preventDefault();
         // event.getNotification().display();
       });
-    } catch (err) {
-      console.error('Error adding foreground listener:', err);
-    }
 
-    // Notification click handler
-    try {
-      window.OneSignal.Notifications.addEventListener('click', (event: any) => {
+      // Notification click / open handler
+      OneSignal.Notifications.addEventListener('click', (event: any) => {
         console.log('Notification clicked:', event);
         const data = event?.notification?.additionalData || {};
 
+        // Handle deep link or custom action
         if (data?.action === 'open_chat' || data?.type === 'ride_request') {
-          console.log('Handling deep link: open chat');
+          console.log('Deep link: opening chat iframe');
           this.loadIframe();
           if (this.chatIframe?.nativeElement) {
             this.chatIframe.nativeElement.contentWindow?.focus?.();
           }
         }
       });
-    } catch (err) {
-      console.error('Error adding click listener:', err);
+    } catch (error) {
+      console.error('Critical error in OneSignal setup:', error);
     }
   }
 
-  // Fetch Player ID and send to backend
-  private getAndSendPlayerId() {
-    try {
-      window.OneSignal.User.getOnesignalId()
-        .then((playerId: string | null) => {
-          if (playerId) {
-            console.log('OneSignal Player ID:', playerId);
-
-            // Send to your PHP backend
-            this.http.post('https://quickhelp.com.ng/api/save-device.php', {
-              player_id: playerId,
-              // Optional: add user_id, device_info, auth_token if you have login
-              // user_id: this.currentUserId || 'guest',
-            }).subscribe({
-              next: (res) => console.log('Player ID saved on server:', res),
-              error: (err) => console.error('Failed to save Player ID:', err)
-            });
-          } else {
-            console.warn('No Player ID returned');
-          }
-        })
-        .catch((err: any) => {
-          console.error('Error getting OneSignal Player ID:', err);
-        });
-    } catch (err) {
-      console.error('Critical error in getAndSendPlayerId:', err);
+private async getAndSendPlayerId() {
+  try {
+    // Only run on native (device/emulator)
+    if (!this.platform.is('hybrid')) {
+      console.log('Skipping Player ID fetch in browser');
+      return;
     }
+
+    // Type assertion to bypass TS check (safe on device)
+    const playerId = await (OneSignal.User as any).getOnesignalId();
+
+    if (playerId) {
+      console.log('OneSignal Player ID:', playerId);
+      this.http.post('https://quickhelp.com.ng/api/save-device.php', {
+        player_id: playerId
+      }).subscribe({
+        next: (res) => console.log('Player ID saved:', res),
+        error: (err) => console.error('Failed to save Player ID:', err)
+      });
+    } else {
+      console.warn('No Player ID returned');
+    }
+  } catch (error) {
+    console.error('Error fetching Player ID:', error);
   }
+}
 
   // ────────────────────────────────────────────────
   // Your original connectivity / iframe methods (unchanged)
