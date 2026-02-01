@@ -105,3 +105,23 @@ ion-header {
   margin: 20px 0;
   color: #333;
 }
+
+ion-alert.custom-alert {
+  --backdrop-opacity: 0.5;
+  --background: #ffffff;
+  --color: #000000;
+  z-index: 9999 !important; // Ensure on top
+}
+
+ion-alert.custom-alert .alert-wrapper {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+ion-alert.custom-alert .alert-input {
+  font-size: 1.1rem;
+  text-align: center;
+}
+ion-alert {
+  z-index: 99999 !important;
+}

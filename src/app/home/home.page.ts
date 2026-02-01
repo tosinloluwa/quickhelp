@@ -118,65 +118,91 @@ export class HomePage implements OnInit {
   // ────────────────────────────────────────────────
   // Prompt for Phone on "Start Chat" button tap
   // ────────────────────────────────────────────────
-  async loadIframe() {
-    console.log('loadIframe() was called!'); // Debug: confirm click reached here
+async loadIframe() {
+  console.log('loadIframe() was called!'); // Debug: confirm click reached here
 
-    if (!this.isAppReady) {
-      console.log('App not fully ready yet - ignoring click');
-      return;
-    }
-
-    if (!this.canConnect) {
-      console.log('No connection - cannot start chat');
-      return;
-    }
-
-    const savedPhone = localStorage.getItem('userPhone');
-
-    if (!savedPhone) {
-      console.log('No phone saved - showing prompt');
-      const alert = await this.alertController.create({
-        header: 'Welcome to QuickHelp!',
-        subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
-        cssClass: 'custom-alert',
-        backdropDismiss: false,
-        inputs: [
-          {
-            name: 'phone',
-            type: 'tel',
-            placeholder: 'e.g. 08012345678',
-            value: '080',
-            attributes: { maxlength: 11 }
-          }
-        ],
-        buttons: [
-          {
-            text: 'MAYBE LATER',
-            role: 'cancel',
-            handler: () => {
-              this.proceedToChat();
-            }
-          },
-          {
-            text: 'START CHAT',
-            handler: (data) => {
-              const phone = data.phone?.trim();
-              if (phone && phone.length >= 10) {
-                this.saveUserPhone(phone);
-                return true;
-              }
-              alert.message = 'Please enter a valid phone number (10+ digits)';
-              return false;
-            }
-          }
-        ]
-      });
-
-      await alert.present();
-    } else {
-      this.proceedToChat();
-    }
+  if (!this.isAppReady) {
+    console.log('App not fully ready yet - ignoring click');
+    return;
   }
+
+  if (!this.canConnect) {
+    console.log('No connection - cannot start chat');
+    return;
+  }
+
+  const savedPhone = localStorage.getItem('userPhone');
+
+  if (!savedPhone) {
+    console.log('No phone saved - showing prompt');
+
+    // Small delay to ensure splash is gone and WebView is focused
+    setTimeout(async () => {
+      try {
+        const alert = await this.alertController.create({
+          header: 'Welcome to QuickHelp!',
+          subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
+          cssClass: 'custom-alert',
+          backdropDismiss: false,
+          mode: 'ios', // or 'md' - test both
+          inputs: [
+            {
+              name: 'phone',
+              type: 'tel',
+              placeholder: 'e.g. 08012345678',
+              value: '080',
+              attributes: { maxlength: 11 }
+            }
+          ],
+          buttons: [
+            {
+              text: 'MAYBE LATER',
+              role: 'cancel',
+              handler: () => {
+                console.log('User chose Maybe Later');
+                this.proceedToChat();
+              }
+            },
+            {
+              text: 'START CHAT',
+              handler: (data) => {
+                const phone = data.phone?.trim();
+                if (phone && phone.length >= 10) {
+                  console.log('User entered phone:', phone);
+                  this.saveUserPhone(phone);
+                  return true;
+                }
+                alert.message = 'Please enter a valid phone number (10+ digits)';
+                return false;
+              }
+            }
+          ]
+        });
+
+        await alert.present();
+        console.log('Alert presented!'); // Now logs only after alert is shown
+
+        // Force focus and select input (keyboard should pop up)
+        setTimeout(() => {
+          const input = document.querySelector('ion-alert input') as HTMLInputElement;
+          if (input) {
+            input.focus();
+            input.select(); // Highlights text for easy editing
+            console.log('Input focused and selected');
+          } else {
+            console.warn('Could not find alert input field');
+          }
+        }, 150); // Tiny delay after present
+
+      } catch (err) {
+        console.error('Alert creation or present failed:', err);
+      }
+    }, 500); // 500ms delay - adjust to 600–800 if still flaky
+  } else {
+    console.log('Phone already saved - proceeding to chat');
+    this.proceedToChat();
+  }
+}
 
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
