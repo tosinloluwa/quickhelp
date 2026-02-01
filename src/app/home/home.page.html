@@ -6,19 +6,26 @@
       <img src="/assets/avatar-nigerian.png" alt="Avatar" />
     </div>
     <ion-text class="welcome-message">Welcome to QuickHelp</ion-text>
-    <ion-button color="primary" (click)="loadIframe()" [disabled]="!canConnect">Click here to start</ion-button>
-    <ion-text *ngIf="!canConnect" class="offline-hint">Connecting, please wait...</ion-text>
+    <ion-button 
+  expand="block" 
+  color="primary" 
+  (click)="loadIframe()"
+  [disabled]="!isAppReady || !canConnect || isOffline">
+  Click here to start chat
+</ion-button>
+    <ion-text *ngIf="!canConnect" class="offline-hint">COnnecting</ion-text>
   </div>
   <div class="iframe-container" *ngIf="isIframeActive && !isOffline">
-    <iframe
-      #chatIframe
-      title="QuickHelp"
-      allow="encrypted-media; allow-same-origin; allow-scripts"
-      src="https://quickhelp.com.ng/chat.php"
-      style="width: 100%; height: 100%;"
-      (load)="onIframeLoad()"
-      (error)="onIframeError()"
-    ></iframe>
+  <iframe
+  #chatIframe
+  title="QuickHelp"
+  allow="encrypted-media; camera; microphone; fullscreen; payment; geolocation; clipboard-write; display-capture"
+  src="https://quickhelp.com.ng/chat.php"
+  style="width: 100%; height: 100%; border: none;"
+  (load)="onIframeLoad()"
+  (error)="onIframeError()"
+  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation allow-storage-access-by-user-activation"
+></iframe>
     <div class="camo">QuickHelp</div>
   </div>
   <div class="loader-container" *ngIf="isOffline && isIframeActive">

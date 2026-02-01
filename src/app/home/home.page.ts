@@ -19,6 +19,7 @@ export class HomePage implements OnInit {
   isIframeActive = false;
   isOffline = false;
   canConnect = false;
+  isAppReady = false; // NEW: Flag to know when component is fully ready
   private userPlayerId: string | null = null;
 
   constructor(
@@ -31,9 +32,10 @@ export class HomePage implements OnInit {
     this.platform.ready().then(() => {
       this.initOneSignal();
       this.checkSiteConnectivity();
+      this.isAppReady = true; // Now safe to enable interactive elements
+      console.log('App fully ready - button should now respond');
     });
 
-    // INSTANT: OS notifies when connection returns
     window.addEventListener('online', () => {
       console.log('OS detected Online - checking immediately');
       this.retryConnection(); 
@@ -41,7 +43,6 @@ export class HomePage implements OnInit {
 
     window.addEventListener('offline', () => this.handleNetworkChange(false));
 
-    // BACKGROUND: Poll every 15 seconds
     setInterval(() => this.checkSiteConnectivity(), 15000);
   }
 
@@ -57,11 +58,9 @@ export class HomePage implements OnInit {
     }
 
     try {
-      // 1. Initialize
       await OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
       console.log('OneSignal initialized successfully');
 
-      // 2. Setup Subscription Listener (catches ID when ready)
       (OneSignal.User as any).pushSubscription.addEventListener("change", (event: any) => {
         const newId = event.current.id;
         console.log("Push Subscription Changed. New ID:", newId);
@@ -72,18 +71,15 @@ export class HomePage implements OnInit {
         }
       });
 
-      // 3. Request permission
       const granted = await OneSignal.Notifications.requestPermission(true);
       if (granted) {
         await this.getAndSendPlayerId();
       }
 
-      // 4. Foreground Notification Listener
       OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event: any) => {
         console.log('Foreground notification received:', event);
       });
 
-      // 5. Click Handler
       OneSignal.Notifications.addEventListener('click', (event: any) => {
         const data = event?.notification?.additionalData || {};
         if (data?.action === 'open_chat' || data?.type === 'ride_request') {
@@ -123,24 +119,34 @@ export class HomePage implements OnInit {
   // Prompt for Phone on "Start Chat" button tap
   // ────────────────────────────────────────────────
   async loadIframe() {
-    if (!this.canConnect) return;
+    console.log('loadIframe() was called!'); // Debug: confirm click reached here
+
+    if (!this.isAppReady) {
+      console.log('App not fully ready yet - ignoring click');
+      return;
+    }
+
+    if (!this.canConnect) {
+      console.log('No connection - cannot start chat');
+      return;
+    }
 
     const savedPhone = localStorage.getItem('userPhone');
 
-    // If no phone saved → prompt user
     if (!savedPhone) {
+      console.log('No phone saved - showing prompt');
       const alert = await this.alertController.create({
         header: 'Welcome to QuickHelp!',
         subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
         cssClass: 'custom-alert',
+        backdropDismiss: false,
         inputs: [
           {
             name: 'phone',
             type: 'tel',
             placeholder: 'e.g. 08012345678',
-            attributes: {
-              maxlength: 11
-            }
+            value: '080',
+            attributes: { maxlength: 11 }
           }
         ],
         buttons: [
@@ -154,11 +160,13 @@ export class HomePage implements OnInit {
           {
             text: 'START CHAT',
             handler: (data) => {
-              if (data.phone && data.phone.length >= 10) {
-                this.saveUserPhone(data.phone);
+              const phone = data.phone?.trim();
+              if (phone && phone.length >= 10) {
+                this.saveUserPhone(phone);
                 return true;
               }
-              return false; // Keep alert open if invalid
+              alert.message = 'Please enter a valid phone number (10+ digits)';
+              return false;
             }
           }
         ]
@@ -173,14 +181,12 @@ export class HomePage implements OnInit {
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
     
-    // Tag in OneSignal dashboard (optional but useful)
     try {
       (OneSignal.User as any).addTag("phone_number", phone);
     } catch (e) {
       console.error("OneSignal Tagging failed", e);
     }
 
-    // Update DB with phone number
     if (this.userPlayerId) {
       this.sendToBackend(this.userPlayerId, phone);
     }
@@ -189,12 +195,13 @@ export class HomePage implements OnInit {
   }
 
   private proceedToChat() {
+    console.log('Proceeding to chat - activating iframe');
     this.isIframeActive = true;
     this.isOffline = false;
   }
 
   // ────────────────────────────────────────────────
-  // Original connectivity methods
+  // Connectivity methods
   // ────────────────────────────────────────────────
   async checkSiteConnectivity() {
     try {
@@ -215,10 +222,12 @@ export class HomePage implements OnInit {
   }
 
   onIframeLoad() {
+    console.log('Iframe loaded successfully');
     this.isOffline = false;
   }
 
   onIframeError() {
+    console.log('Iframe failed to load');
     this.isIframeActive = false;
     this.isOffline = true;
     this.canConnect = false;
@@ -245,7 +254,6 @@ export class HomePage implements OnInit {
         this.isOffline = false;
         this.isIframeActive = true;
 
-        // Force reload iframe with cache bust
         if (this.chatIframe?.nativeElement) {
           const iframe = this.chatIframe.nativeElement;
           iframe.src = 'https://quickhelp.com.ng/chat.php?' + Date.now();
