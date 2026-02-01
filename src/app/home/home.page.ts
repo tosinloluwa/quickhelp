@@ -19,7 +19,7 @@ export class HomePage implements OnInit {
   isIframeActive = false;
   isOffline = false;
   canConnect = false;
-  isAppReady = false; // NEW: Flag to know when component is fully ready
+  isAppReady = false; // NEW - controls button & overlay
   private userPlayerId: string | null = null;
 
   constructor(
@@ -32,10 +32,10 @@ export class HomePage implements OnInit {
     this.platform.ready().then(() => {
       this.initOneSignal();
       this.checkSiteConnectivity();
-      this.isAppReady = true; // Now safe to enable interactive elements
-      console.log('App fully ready - button should now respond');
+      this.isAppReady = true;
     });
 
+    // INSTANT: OS notifies when connection returns
     window.addEventListener('online', () => {
       console.log('OS detected Online - checking immediately');
       this.retryConnection(); 
@@ -43,6 +43,7 @@ export class HomePage implements OnInit {
 
     window.addEventListener('offline', () => this.handleNetworkChange(false));
 
+    // BACKGROUND: Poll every 15 seconds
     setInterval(() => this.checkSiteConnectivity(), 15000);
   }
 
@@ -58,9 +59,11 @@ export class HomePage implements OnInit {
     }
 
     try {
+      // 1. Initialize
       await OneSignal.initialize('4c49cb8c-16d6-4d3b-826e-c11fc151bcaf');
       console.log('OneSignal initialized successfully');
 
+      // 2. Setup Subscription Listener (catches ID when ready)
       (OneSignal.User as any).pushSubscription.addEventListener("change", (event: any) => {
         const newId = event.current.id;
         console.log("Push Subscription Changed. New ID:", newId);
@@ -71,15 +74,18 @@ export class HomePage implements OnInit {
         }
       });
 
+      // 3. Request permission
       const granted = await OneSignal.Notifications.requestPermission(true);
       if (granted) {
         await this.getAndSendPlayerId();
       }
 
+      // 4. Foreground Notification Listener
       OneSignal.Notifications.addEventListener('foregroundWillDisplay', (event: any) => {
         console.log('Foreground notification received:', event);
       });
 
+      // 5. Click Handler
       OneSignal.Notifications.addEventListener('click', (event: any) => {
         const data = event?.notification?.additionalData || {};
         if (data?.action === 'open_chat' || data?.type === 'ride_request') {
@@ -118,101 +124,97 @@ export class HomePage implements OnInit {
   // ────────────────────────────────────────────────
   // Prompt for Phone on "Start Chat" button tap
   // ────────────────────────────────────────────────
-async loadIframe() {
-  console.log('loadIframe() was called!'); // Debug: confirm click reached here
+  async loadIframe() {
+    console.log('loadIframe() was called!'); // Debug: confirm click reached here
 
-  if (!this.isAppReady) {
-    console.log('App not fully ready yet - ignoring click');
-    return;
-  }
+    if (!this.isAppReady) {
+      console.log('App not fully ready yet - ignoring click');
+      return;
+    }
 
-  if (!this.canConnect) {
-    console.log('No connection - cannot start chat');
-    return;
-  }
+    if (!this.canConnect) {
+      console.log('No connection - cannot start chat');
+      return;
+    }
 
-  const savedPhone = localStorage.getItem('userPhone');
+    const savedPhone = localStorage.getItem('userPhone');
 
-  if (!savedPhone) {
-    console.log('No phone saved - showing prompt');
+    if (!savedPhone) {
+      console.log('No phone saved - showing prompt');
 
-    // Small delay to ensure splash is gone and WebView is focused
-    setTimeout(async () => {
-      try {
-        const alert = await this.alertController.create({
-          header: 'Welcome to QuickHelp!',
-          subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
-          cssClass: 'custom-alert',
-          backdropDismiss: false,
-          mode: 'ios', // or 'md' - test both
-          inputs: [
-            {
-              name: 'phone',
-              type: 'tel',
-              placeholder: 'e.g. 08012345678',
-              value: '080',
-              attributes: { maxlength: 11 }
-            }
-          ],
-          buttons: [
-            {
-              text: 'MAYBE LATER',
-              role: 'cancel',
-              handler: () => {
-                console.log('User chose Maybe Later');
-                this.proceedToChat();
+      // Small delay to ensure splash is gone and WebView is focused
+      setTimeout(async () => {
+        try {
+          const alert = await this.alertController.create({
+            header: 'Welcome to QuickHelp!',
+            subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
+            cssClass: 'custom-alert',
+            backdropDismiss: false,
+            mode: 'ios', // or 'md' - test both
+            inputs: [
+              {
+                name: 'phone',
+                type: 'tel',
+                placeholder: 'e.g. 08012345678',
+                value: '080',
+                attributes: { maxlength: 11 }
               }
-            },
-            {
-              text: 'START CHAT',
-              handler: (data) => {
-                const phone = data.phone?.trim();
-                if (phone && phone.length >= 10) {
-                  console.log('User entered phone:', phone);
-                  this.saveUserPhone(phone);
-                  return true;
+            ],
+            buttons: [
+              {
+                text: 'MAYBE LATER',
+                role: 'cancel',
+                handler: () => {
+                  console.log('User chose Maybe Later');
+                  this.proceedToChat();
                 }
-                alert.message = 'Please enter a valid phone number (10+ digits)';
-                return false;
+              },
+              {
+                text: 'START CHAT',
+                handler: (data) => {
+                  const phone = data.phone?.trim();
+                  if (phone && phone.length >= 10) {
+                    console.log('User entered phone:', phone);
+                    this.saveUserPhone(phone);
+                    return true;
+                  }
+                  alert.message = 'Please enter a valid phone number (10+ digits)';
+                  return false;
+                }
               }
+            ]
+          });
+
+          await alert.present();
+          console.log('Alert presented!');
+
+          // Force focus on alert input
+          setTimeout(() => {
+            const input = document.querySelector('ion-alert input') as HTMLInputElement;
+            if (input) {
+              input.focus();
+              input.select(); // Optional: highlight text
             }
-          ]
-        });
-
-        await alert.present();
-        console.log('Alert presented!'); // Now logs only after alert is shown
-
-        // Force focus and select input (keyboard should pop up)
-        setTimeout(() => {
-          const input = document.querySelector('ion-alert input') as HTMLInputElement;
-          if (input) {
-            input.focus();
-            input.select(); // Highlights text for easy editing
-            console.log('Input focused and selected');
-          } else {
-            console.warn('Could not find alert input field');
-          }
-        }, 150); // Tiny delay after present
-
-      } catch (err) {
-        console.error('Alert creation or present failed:', err);
-      }
-    }, 500); // 500ms delay - adjust to 600–800 if still flaky
-  } else {
-    console.log('Phone already saved - proceeding to chat');
-    this.proceedToChat();
+          }, 150); // Tiny delay after present
+        } catch (err) {
+          console.error('Alert creation failed:', err);
+        }
+      }, 500); // 500ms delay - adjust if needed (300–800ms)
+    } else {
+      console.log('Phone already saved - proceeding to chat');
+      this.proceedToChat();
+    }
   }
-}
 
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
     
+    // Tag in OneSignal dashboard
     try {
       (OneSignal.User as any).addTag("phone_number", phone);
-    } catch (e) {
-      console.error("OneSignal Tagging failed", e);
-    }
+    } catch (e) { console.error("OneSignal Tagging failed", e); }
 
+    // Update DB with the phone number
     if (this.userPlayerId) {
       this.sendToBackend(this.userPlayerId, phone);
     }
@@ -221,13 +223,12 @@ async loadIframe() {
   }
 
   private proceedToChat() {
-    console.log('Proceeding to chat - activating iframe');
     this.isIframeActive = true;
     this.isOffline = false;
   }
 
   // ────────────────────────────────────────────────
-  // Connectivity methods
+  // Original connectivity methods
   // ────────────────────────────────────────────────
   async checkSiteConnectivity() {
     try {
@@ -248,12 +249,10 @@ async loadIframe() {
   }
 
   onIframeLoad() {
-    console.log('Iframe loaded successfully');
     this.isOffline = false;
   }
 
   onIframeError() {
-    console.log('Iframe failed to load');
     this.isIframeActive = false;
     this.isOffline = true;
     this.canConnect = false;
@@ -280,6 +279,7 @@ async loadIframe() {
         this.isOffline = false;
         this.isIframeActive = true;
 
+        // Force reload iframe with cache bust
         if (this.chatIframe?.nativeElement) {
           const iframe = this.chatIframe.nativeElement;
           iframe.src = 'https://quickhelp.com.ng/chat.php?' + Date.now();
