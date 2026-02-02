@@ -125,3 +125,21 @@ ion-alert.custom-alert .alert-input {
 ion-alert {
   z-index: 99999 !important;
 }
+
+.required-phone-alert {
+  .alert-button-group {
+    button[disabled] {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: #ccc;
+    }
+    .alert-confirm-button {
+      --background-activated: var(--ion-color-primary);
+      font-weight: bold;
+    }
+  }
+  .alert-message {
+    color: var(--ion-color-danger);
+    font-size: 0.95rem;
+  }
+}

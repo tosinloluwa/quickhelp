@@ -6,13 +6,7 @@
       <img src="/assets/avatar-nigerian.png" alt="Avatar" />
     </div>
     <ion-text class="welcome-message">Welcome to QuickHelp</ion-text>
-    <ion-button 
-  expand="block" 
-  color="primary" 
-  (click)="loadIframe()"
-  [disabled]="!isAppReady || !canConnect || isOffline">
-  Click here to start chat
-</ion-button>
+<ion-button color="primary" (click)="loadIframe()">Click here to start</ion-button>
     <ion-text *ngIf="!canConnect" class="offline-hint">COnnecting</ion-text>
   </div>
   <div class="iframe-container" *ngIf="isIframeActive && !isOffline">
