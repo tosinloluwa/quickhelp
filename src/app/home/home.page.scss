@@ -158,3 +158,65 @@ ion-alert.custom-alert .alert-input {
   min-height: 48px !important;
   font-size: 1.1rem !important;
 }
+
+/* Custom Phone Modal */
+.phone-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phone-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+
+.phone-modal h2 {
+  margin: 0 0 12px;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.phone-modal p {
+  margin: 0 0 20px;
+  color: #666;
+}
+
+.phone-input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.2rem;
+  text-align: center;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.phone-error {
+  color: #e74c3c;
+  margin: 0 0 16px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+.start-btn {
+  background: var(--ion-color-primary);
+  color: white;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  cursor: pointer;
+}

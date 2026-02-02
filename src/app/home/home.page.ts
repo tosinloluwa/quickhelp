@@ -1,10 +1,11 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms'; // Added for ngModel
 import { IonHeader, IonToolbar, IonTitle, IonContent, IonSpinner, IonButton, IonText, IonIcon } from '@ionic/angular/standalone';
-import { Platform, AlertController, ToastController } from '@ionic/angular'; // Added ToastController
+import { Platform, ToastController } from '@ionic/angular'; // Removed AlertController (no longer needed)
 import { HttpClient } from '@angular/common/http';
-import { addIcons } from 'ionicons'; // Correct import for addIcons
-import { cloudOfflineOutline, refreshOutline } from 'ionicons/icons'; // Correct icons import
+import { addIcons } from 'ionicons';
+import { cloudOfflineOutline, refreshOutline } from 'ionicons/icons';
 
 // Modern modular import for OneSignal v5+ (cordova plugin)
 import OneSignal from 'onesignal-cordova-plugin';
@@ -16,6 +17,7 @@ import OneSignal from 'onesignal-cordova-plugin';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule, // Added for ngModel in modal
     IonHeader,
     IonToolbar,
     IonTitle,
@@ -23,7 +25,7 @@ import OneSignal from 'onesignal-cordova-plugin';
     IonSpinner,
     IonButton,
     IonText,
-    IonIcon // Fixed - added here
+    IonIcon
   ],
 })
 export class HomePage implements OnInit {
@@ -34,11 +36,15 @@ export class HomePage implements OnInit {
   isAppReady = false;
   private userPlayerId: string | null = null;
 
+  // New properties for custom modal
+  showPhoneModal = false;
+  phoneInput = '080';
+  phoneError = '';
+
   constructor(
     private platform: Platform,
     private http: HttpClient,
-    private alertController: AlertController,
-    private toastController: ToastController // Added for offline feedback
+    private toastController: ToastController
   ) {
     addIcons({
       'cloud-offline-outline': cloudOfflineOutline,
@@ -130,95 +136,57 @@ export class HomePage implements OnInit {
   }
 
   async loadIframe() {
-  console.log('loadIframe() was called!');
+    console.log('loadIframe() was called!');
 
-  if (!this.isAppReady) {
-    console.log('App not fully ready yet - ignoring click');
-    return;
-  }
-
-  if (!this.canConnect) {
-    console.log('No connection - quick retry...');
-    await this.checkSiteConnectivity();
-    if (!this.canConnect) {
-      const toast = await this.toastController.create({
-        message: 'Still connecting to server... please check your internet or try again.',
-        duration: 4000,
-        position: 'bottom',
-        color: 'warning',
-        buttons: [
-          {
-            text: 'Retry',
-            handler: () => this.retryConnection()
-          }
-        ]
-      });
-      await toast.present();
+    if (!this.isAppReady) {
+      console.log('App not fully ready yet - ignoring click');
       return;
     }
-  }
 
-  const savedPhone = localStorage.getItem('userPhone');
-
-  if (savedPhone) {
-    this.proceedToChat();
-    return;
-  }
-
-  console.log('No phone saved - showing prompt');
-
-  setTimeout(async () => {
-    try {
-      console.log('Attempting to create alert...');
-      const alert = await this.alertController.create({
-        header: 'Welcome to QuickHelp!',
-        subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
-        cssClass: 'custom-alert',
-        backdropDismiss: false,
-        mode: 'ios',
-        inputs: [
-          {
-            name: 'phone',
-            type: 'tel',
-            placeholder: 'e.g. 08012345678',
-            value: '080',
-            attributes: { maxlength: 11 }
-          }
-        ],
-        buttons: [          
-          {
-            text: 'START CHAT',
-            handler: (data) => {
-              const phone = data.phone?.trim();
-              if (phone && phone.length >= 10) {
-                this.saveUserPhone(phone);
-                return true;
-              }
-              return false;
+    if (!this.canConnect) {
+      console.log('No connection - quick retry...');
+      await this.checkSiteConnectivity();
+      if (!this.canConnect) {
+        const toast = await this.toastController.create({
+          message: 'Still connecting to server... please check your internet or try again.',
+          duration: 4000,
+          position: 'bottom',
+          color: 'warning',
+          buttons: [
+            {
+              text: 'Retry',
+              handler: () => this.retryConnection()
             }
-          }
-        ]
-      });
-
-      console.log('Alert created, presenting now...');
-      await alert.present();
-      console.log('Alert presented successfully!');
-
-      // DOM check
-      console.log('Alert DOM check:', !!document.querySelector('ion-alert'));
-
-      const input = document.querySelector('ion-alert input') as HTMLInputElement;
-      if (input) {
-        input.focus();
-        console.log('Input focused');
-      } else {
-        console.warn('No input found in alert');
+          ]
+        });
+        await toast.present();
+        return;
       }
-    } catch (err) {
-      console.error('Alert creation or present failed:', err);
     }
-  }, 1000); // Increased to 1000ms - gives splash time to fully clear
-}
+
+    const savedPhone = localStorage.getItem('userPhone');
+
+    if (savedPhone) {
+      this.proceedToChat();
+      return;
+    }
+
+    console.log('No phone saved - showing HTML modal');
+    this.phoneInput = '080';
+    this.phoneError = '';
+    this.showPhoneModal = true;
+  }
+
+  submitPhone() {
+    const phone = this.phoneInput.trim();
+    if (phone.length >= 10 && /^\d+$/.test(phone)) {
+      console.log('Valid phone entered:', phone);
+      this.saveUserPhone(phone);
+      this.showPhoneModal = false;
+    } else {
+      this.phoneError = 'Please enter a valid phone number (10+ digits)';
+    }
+  }
 
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
@@ -241,37 +209,33 @@ export class HomePage implements OnInit {
     this.isOffline = false;
   }
 
-async checkSiteConnectivity() {
-  if (!this.platform.is('hybrid')) {
-    // In browser dev mode: assume connected (no spam logs)
-    this.canConnect = true;
-    this.isOffline = false;
-    console.log('Browser mode: assuming connected');
-    return;
-  }
-
-  return new Promise<void>((resolve) => {
-    const img = new Image();
-    img.onload = () => {
+  async checkSiteConnectivity() {
+    if (!this.platform.is('hybrid')) {
       this.canConnect = true;
       this.isOffline = false;
-      console.log('Connectivity test passed (image loaded)');
-      resolve();
-    };
-    img.onerror = () => {
-      this.canConnect = false;
-      if (this.isIframeActive) {
-        this.isOffline = true;
-      }
-      console.log('Connectivity test failed (image load error)');
-      resolve();
-    };
+      console.log('Browser mode: assuming connected');
+      return;
+    }
 
-    // Use your own small image (favicon or logo) with cache-bust
-    // Replace with any fast-loading asset from your domain
-    img.src = 'https://quickhelp.com.ng/favicon.ico?' + Date.now();
-  });
-}
+    return new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this.canConnect = true;
+        this.isOffline = false;
+        console.log('Connectivity test passed (image loaded)');
+        resolve();
+      };
+      img.onerror = () => {
+        this.canConnect = false;
+        if (this.isIframeActive) {
+          this.isOffline = true;
+        }
+        console.log('Connectivity test failed (image load error)');
+        resolve();
+      };
+      img.src = 'https://quickhelp.com.ng/favicon.ico?' + Date.now();
+    });
+  }
 
   onIframeLoad() {
     this.isOffline = false;
