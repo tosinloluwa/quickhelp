@@ -248,34 +248,36 @@ async loadIframe() {
     this.isOffline = false;
   }
 
-  async checkSiteConnectivity() {
-    if (!this.platform.is('hybrid')) {
-      this.canConnect = true;
-      this.isOffline = false;
-      return;
-    }
+async checkSiteConnectivity() {
+  // In browser dev: assume connected to avoid spam
+  if (!this.platform.is('hybrid')) {
+    this.canConnect = true;
+    this.isOffline = false;
+    return;
+  }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+  // Real device: use a more forgiving check
+  try {
+    // Prefer a simple GET to a small resource (HEAD can be blocked)
+    const response = await fetch('https://quickhelp.com.ng/chat.php', {
+      method: 'GET', // Changed to GET
+      mode: 'no-cors',
+      cache: 'no-store',
+      redirect: 'follow'
+    });
 
-    try {
-      await fetch('https://quickhelp.com.ng/chat.php', {
-        method: 'HEAD',
-        mode: 'no-cors',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      this.canConnect = true;
-      this.isOffline = false;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.log('Connectivity check failed or timed out:', error);
-      this.canConnect = false;
-      if (this.isIframeActive) {
-        this.isOffline = true;
-      }
+    // Even in no-cors, if we get here without exception, consider it success
+    this.canConnect = true;
+    this.isOffline = false;
+    console.log('Site reachable (GET succeeded)');
+  } catch (error) {
+    console.log('Connectivity check failed:', error);
+    this.canConnect = false;
+    if (this.isIframeActive) {
+      this.isOffline = true;
     }
   }
+}
 
   onIframeLoad() {
     this.isOffline = false;
