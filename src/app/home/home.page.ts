@@ -241,34 +241,37 @@ export class HomePage implements OnInit {
     this.isOffline = false;
   }
 
-  async checkSiteConnectivity() {
-    if (!this.platform.is('hybrid')) {
+async checkSiteConnectivity() {
+  if (!this.platform.is('hybrid')) {
+    // In browser dev mode: assume connected (no spam logs)
+    this.canConnect = true;
+    this.isOffline = false;
+    console.log('Browser mode: assuming connected');
+    return;
+  }
+
+  return new Promise<void>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
       this.canConnect = true;
       this.isOffline = false;
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-    try {
-      await fetch('https://quickhelp.com.ng/chat.php', {
-        method: 'HEAD',
-        mode: 'no-cors',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      this.canConnect = true;
-      this.isOffline = false;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.log('Connectivity check failed or timed out:', error);
+      console.log('Connectivity test passed (image loaded)');
+      resolve();
+    };
+    img.onerror = () => {
       this.canConnect = false;
       if (this.isIframeActive) {
         this.isOffline = true;
       }
-    }
-  }
+      console.log('Connectivity test failed (image load error)');
+      resolve();
+    };
+
+    // Use your own small image (favicon or logo) with cache-bust
+    // Replace with any fast-loading asset from your domain
+    img.src = 'https://quickhelp.com.ng/favicon.ico?' + Date.now();
+  });
+}
 
   onIframeLoad() {
     this.isOffline = false;
