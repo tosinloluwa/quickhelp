@@ -1,19 +1,9 @@
+/* Header */
 ion-header {
   --background: transparent;
 }
 
-.logo-container {
-  display: flex;
-  justify-content: center;
-  padding: 10px 0;
-}
-
-.logo-container img {
-  width: 200px;
-  height: 100px;
-  object-fit: contain;
-}
-
+/* Landing page layout */
 .landing-page {
   position: absolute;
   top: 0;
@@ -51,6 +41,7 @@ ion-header {
   color: #e74c3c;
 }
 
+/* Iframe container */
 .iframe-container {
   position: relative;
   width: 100%;
@@ -85,6 +76,7 @@ ion-header {
   background: transparent;
 }
 
+/* Loader / Offline overlay */
 .loader-container {
   position: absolute;
   top: 0;
@@ -106,26 +98,43 @@ ion-header {
   color: #333;
 }
 
+/* ────────────────────────────────────────────────
+   Critical Fix: Force alert & toast visibility on Android WebView
+   ──────────────────────────────────────────────── */
+ion-alert, ion-toast {
+  z-index: 999999 !important;
+  --z-index: 999999 !important;
+}
+
+ion-alert .alert-wrapper,
+ion-toast .toast-wrapper {
+  z-index: 1000000 !important;
+  transform: translateZ(0) !important; /* Forces hardware acceleration */
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
+  background: white !important;
+}
+
+ion-alert::part(backdrop),
+ion-toast::part(backdrop) {
+  --backdrop-opacity: 0.7 !important; /* Darker so user sees overlay */
+}
+
+/* Alert styling (consolidated - removed duplicates) */
 ion-alert.custom-alert {
-  --backdrop-opacity: 0.5;
   --background: #ffffff;
   --color: #000000;
-  z-index: 9999 !important; // Ensure on top
 }
 
 ion-alert.custom-alert .alert-wrapper {
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
 
 ion-alert.custom-alert .alert-input {
   font-size: 1.1rem;
   text-align: center;
 }
-ion-alert {
-  z-index: 99999 !important;
-}
 
+/* Disabled button in required alert */
 .required-phone-alert {
   .alert-button-group {
     button[disabled] {
@@ -142,4 +151,10 @@ ion-alert {
     color: var(--ion-color-danger);
     font-size: 0.95rem;
   }
+}
+
+/* Button visibility */
+.alert-button-group button {
+  min-height: 48px !important;
+  font-size: 1.1rem !important;
 }
