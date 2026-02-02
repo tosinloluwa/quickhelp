@@ -129,84 +129,103 @@ export class HomePage implements OnInit {
     });
   }
 
-  async loadIframe() {
-    console.log('loadIframe() was called!');
+async loadIframe() {
+  console.log('loadIframe() was called!');
 
-    // Quick retry if not connected
+  if (!this.isAppReady) {
+    console.log('App not fully ready yet - ignoring click');
+    return;
+  }
+
+  if (!this.canConnect) {
+    console.log('No connection - quick retry...');
+    await this.checkSiteConnectivity();
     if (!this.canConnect) {
-      console.log('No recent connection - quick retry...');
-      await this.checkSiteConnectivity();
+      window.focus();
+      document.body.focus();
 
-      if (!this.canConnect) {
-        const toast = await this.toastController.create({
-          message: 'Still connecting to server... please check your internet or try again.',
-          duration: 4000,
-          position: 'bottom',
-          color: 'warning',
-          buttons: [
-            {
-              text: 'Retry',
-              handler: () => this.retryConnection()
-            }
-          ]
-        });
-        await toast.present();
-        return;
-      }
-    }
-
-    const savedPhone = localStorage.getItem('userPhone');
-
-    if (savedPhone) {
-      this.proceedToChat();
+      const toast = await this.toastController.create({
+        message: 'Still connecting to server... please check your internet or try again.',
+        duration: 4000,
+        position: 'bottom',
+        color: 'warning',
+        buttons: [
+          {
+            text: 'Retry',
+            handler: () => this.retryConnection()
+          }
+        ]
+      });
+      await toast.present();
       return;
     }
+  }
 
-    console.log('No phone saved - showing prompt');
+  const savedPhone = localStorage.getItem('userPhone');
 
-    setTimeout(async () => {
-      try {
-        const alert = await this.alertController.create({
-          header: 'Welcome to QuickHelp!',
-          subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
-          cssClass: 'custom-alert',
-          backdropDismiss: false,
-          mode: 'ios',
-          inputs: [
-            {
-              name: 'phone',
-              type: 'tel',
-              placeholder: 'e.g. 08012345678',
-              value: '080',
-              attributes: { maxlength: 11 }
+  if (savedPhone) {
+    this.proceedToChat();
+    return;
+  }
+
+  console.log('No phone saved - showing prompt');
+
+  setTimeout(async () => {
+    try {
+      window.focus();
+      document.body.focus();
+
+      const alert = await this.alertController.create({
+        header: 'Welcome to QuickHelp!',
+        subHeader: 'Your Phone number is required to receive QuickHelp Notifications and Updates. You will be doing this only once.',
+        cssClass: 'custom-alert',
+        backdropDismiss: false,
+        mode: 'ios',
+        inputs: [
+          {
+            name: 'phone',
+            type: 'tel',
+            placeholder: 'e.g. 08012345678',
+            value: '080',
+            attributes: { maxlength: 11 }
+          }
+        ],
+        buttons: [
+          {
+            text: 'MAYBE LATER',
+            role: 'cancel',
+            handler: () => {
+              this.proceedToChat();
             }
-          ],
-          buttons: [           
-            {
-              text: 'START CHAT',
-              handler: (data) => {
-                const phone = data.phone?.trim();
-                if (phone && phone.length >= 10) {
-                  this.saveUserPhone(phone);
-                  return true;
-                }
-                return false;
+          },
+          {
+            text: 'START CHAT',
+            handler: (data) => {
+              const phone = data.phone?.trim();
+              if (phone && phone.length >= 10) {
+                this.saveUserPhone(phone);
+                return true;
               }
+              return false;
             }
-          ]
-        });
+          }
+        ]
+      });
 
-        await alert.present();
+      await alert.present();
+      console.log('Alert presented!');
 
+      setTimeout(() => {
         const input = document.querySelector('ion-alert input') as HTMLInputElement;
         if (input) {
           input.focus();
         }
-      } catch (err) {
-        console.error('Alert failed:', err);
-      }
-    }, 500);
-  }
+      }, 300);
+    } catch (err) {
+      console.error('Alert failed:', err);
+    }
+  }, 800); // Increased delay for safety
+}
 
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
