@@ -1,3 +1,4 @@
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms'; // Added for ngModel
@@ -36,20 +37,28 @@ export class HomePage implements OnInit {
   isAppReady = false;
   private userPlayerId: string | null = null;
 
-  // New properties for custom modal
-  showPhoneModal = false;
-  phoneInput = '080';
-  phoneError = '';
+  // Registration modal properties
+  showRegModal = false;
+  regForm = { last_name: '', first_name: '', email: '', phone_no: '', password: '', confirm_password: '' };
+  regError = '';
+  regSuccess = '';
+  isSubmitting = false;
+
+  iframeSrc!: SafeResourceUrl;                    // ← Add this
 
   constructor(
     private platform: Platform,
     private http: HttpClient,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private sanitizer: DomSanitizer
   ) {
     addIcons({
       'cloud-offline-outline': cloudOfflineOutline,
       'refresh-outline': refreshOutline
     });
+
+this.iframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl('');
+
   }
 
   ngOnInit() {
@@ -171,25 +180,61 @@ export class HomePage implements OnInit {
       return;
     }
 
-    console.log('No phone saved - showing HTML modal');
-    this.phoneInput = '080';
-    this.phoneError = '';
-    this.showPhoneModal = true;
+    console.log('No phone saved - showing registration modal');
+    this.regForm = { last_name: '', first_name: '', email: '', phone_no: '', password: '', confirm_password: '' };
+    this.regError = '';
+    this.regSuccess = '';
+    this.showRegModal = true;
   }
 
-  submitPhone() {
-    const phone = this.phoneInput.trim();
-    if (phone.length >= 10 && /^\d+$/.test(phone)) {
-      console.log('Valid phone entered:', phone);
-      this.saveUserPhone(phone);
-      this.showPhoneModal = false;
-    } else {
-      this.phoneError = 'Please enter a valid phone number (10+ digits)';
+  async submitRegistration() {
+    const { last_name, first_name, email, phone_no, password } = this.regForm;
+
+    if (!last_name || !first_name || !email || !phone_no || !password) {
+      this.regError = 'Please fill in all fields.';
+      return;
+    }
+
+    if (phone_no.length < 10 || !/^\d+$/.test(phone_no)) {
+      this.regError = 'Please enter a valid phone number (10+ digits).';
+      return;
+    }
+    if (this.regForm.password !== this.regForm.confirm_password) {
+  this.regError = 'Passwords do not match.';
+  return;
+}
+
+    this.isSubmitting = true;
+    this.regError = '';
+
+    try {
+      const response = await fetch('https://quickhelp.com.ng/api/register-app-user.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ last_name, first_name, email, username: email, phone_no, password })
+      });
+
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        this.regSuccess = 'Account created! Loading chat...';
+        this.showRegModal = false;
+        this.saveUserPhone(phone_no);
+      } else {
+        this.regError = result.error || 'Registration failed. Please try again.';
+      }
+    } catch (e) {
+      this.regError = 'Network error. Please check your connection.';
+    } finally {
+      this.isSubmitting = false;
     }
   }
 
   private saveUserPhone(phone: string) {
     localStorage.setItem('userPhone', phone);
+    localStorage.setItem('didiname', this.regForm.first_name);
+    localStorage.setItem('email', this.regForm.email);
+    localStorage.setItem('lastname', this.regForm.last_name);
 
     try {
       (OneSignal.User as any).addTag("phone_number", phone);
@@ -204,10 +249,19 @@ export class HomePage implements OnInit {
     this.proceedToChat();
   }
 
-  private proceedToChat() {
-    this.isIframeActive = true;
-    this.isOffline = false;
-  }
+private proceedToChat() {
+  const phone = localStorage.getItem('userPhone') || '';
+  const firstname = localStorage.getItem('didiname') || '';
+  const email = localStorage.getItem('email') || '';
+  const lastname = localStorage.getItem('lastname') || '';
+
+  const url = `https://quickhelp.com.ng/chat.php?phone=${encodeURIComponent(phone)}&firstname=${encodeURIComponent(firstname)}&email=${encodeURIComponent(email)}&lastname=${encodeURIComponent(lastname)}&t=${Date.now()}`;
+
+  this.iframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+
+  this.isIframeActive = true;
+  this.isOffline = false;
+}
 
   async checkSiteConnectivity() {
     if (!this.platform.is('hybrid')) {
@@ -256,27 +310,26 @@ export class HomePage implements OnInit {
     this.checkSiteConnectivity();
   }
 
-  async retryConnection() {
-    console.log('Turbo Retry initiated...');
+async retryConnection() {
+  console.log('Turbo Retry initiated...');
 
-    this.isOffline = true;
+  this.isOffline = true;
 
-    try {
-      await this.checkSiteConnectivity();
+  try {
+    await this.checkSiteConnectivity();
 
-      if (this.canConnect) {
-        this.isOffline = false;
-        this.isIframeActive = true;
+    if (this.canConnect) {
+      this.isOffline = false;
+      this.isIframeActive = true;
 
-        if (this.chatIframe?.nativeElement) {
-          const iframe = this.chatIframe.nativeElement;
-          iframe.src = 'https://quickhelp.com.ng/chat.php?' + Date.now();
-        }
-      } else {
-        console.log('Retry failed: Still no connection.');
+      if (this.chatIframe?.nativeElement) {
+        // Reuse the same URL with user data
+        this.proceedToChat();
+        this.chatIframe.nativeElement.src = (this.iframeSrc as any).changingThisBreaksApplicationSecurity; // Angular hack for reload
       }
-    } catch (error) {
-      console.error('Retry error:', error);
     }
+  } catch (error) {
+    console.error('Retry error:', error);
   }
+}
 }

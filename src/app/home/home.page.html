@@ -16,7 +16,7 @@
       #chatIframe
       title="QuickHelp"
       allow="encrypted-media; camera; microphone; fullscreen; payment; geolocation; clipboard-write; display-capture"
-      src="https://quickhelp.com.ng/chat.php"
+      [src]="iframeSrc"
       style="width: 100%; height: 100%; border: none;"
       (load)="onIframeLoad()"
       (error)="onIframeError()"
@@ -33,25 +33,59 @@
   </div>
 </ion-content>
 
-<!-- Custom Phone Modal (replaces Ionic alert) -->
-<div *ngIf="showPhoneModal" class="phone-modal-overlay">
-  <div class="phone-modal">
-    <h2>Welcome to QuickHelp!</h2>
-    <p>Your Phone number is required to receive notifications and updates. You will be doing this only once.</p>
+<div *ngIf="showRegModal" class="reg-overlay">
+  <div class="reg-card">
 
-    <input 
-      type="tel" 
-      [(ngModel)]="phoneInput" 
-      placeholder="e.g. 08012345678" 
-      maxlength="11" 
-      pattern="[0-9]*" 
-      inputmode="tel"
-      class="phone-input" />
-
-    <p *ngIf="phoneError" class="phone-error">{{ phoneError }}</p>
-
-    <div class="modal-buttons">
-      <button class="start-btn" (click)="submitPhone()">START CHAT</button>
+    <div class="reg-header">
+      <img src="/assets/quicke.png" alt="QuickHelp" class="reg-logo" />
+      <h2>Create Account</h2>
+      <p>Join QuickHelp — takes less than a minute</p>
     </div>
+
+    <div class="reg-body">
+      <div class="reg-row">
+        <div class="reg-field">
+          <span class="reg-icon">👤</span>
+          <input type="text" [(ngModel)]="regForm.first_name" placeholder="First Name" />
+        </div>
+        <div class="reg-field">
+          <span class="reg-icon">👤</span>
+          <input type="text" [(ngModel)]="regForm.last_name" placeholder="Surname" />
+        </div>
+
+      </div>
+
+      <div class="reg-field">
+        <span class="reg-icon">✉️</span>
+        <input type="email" [(ngModel)]="regForm.email" placeholder="Email Address" />
+      </div>
+
+      <div class="reg-field">
+        <span class="reg-icon">📱</span>
+        <input type="tel" [(ngModel)]="regForm.phone_no" placeholder="e.g. 08012345678" maxlength="11" pattern="[0-9]*" inputmode="tel" />
+      </div>
+
+      <div class="reg-field">
+        <span class="reg-icon">🔒</span>
+        <input type="password" [(ngModel)]="regForm.password" placeholder="Create Password" />
+      </div>
+
+     
+      <div class="reg-field">
+        <span class="reg-icon">🔑</span>
+        <input type="password" [(ngModel)]="regForm.confirm_password" placeholder="Confirm Password" />
+      </div>
+
+      <div class="reg-error" *ngIf="regError">⚠️ {{ regError }}</div>
+      <div class="reg-success" *ngIf="regSuccess">✅ {{ regSuccess }}</div>
+
+      <button class="reg-btn" (click)="submitRegistration()" [disabled]="isSubmitting">
+        <span *ngIf="!isSubmitting">Start Chatting →</span>
+        <span *ngIf="isSubmitting" class="reg-spinner"></span>
+      </button>
+
+      <p class="reg-terms">By registering, you agree to our <a href="https://quickhelp.com.ng/terms.php" target="_blank">Terms of Service</a></p>
+    </div>
+
   </div>
 </div>

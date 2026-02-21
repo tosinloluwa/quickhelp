@@ -13,3 +13,4 @@ interface OneSignalStatic {
 interface Window {
   OneSignal: OneSignalStatic;
 }
+
