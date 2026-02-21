@@ -110,11 +110,22 @@ this.iframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl('');
       });
 
       OneSignal.Notifications.addEventListener('click', (event: any) => {
-        const data = event?.notification?.additionalData || {};
-        if (data?.action === 'open_chat' || data?.type === 'ride_request') {
-          this.loadIframe();
-        }
-      });
+  const data = event?.notification?.additionalData || {};
+  const notifTitle = event?.notification?.title || '';
+  const notifBody  = event?.notification?.body || '';
+
+  console.log('🛎️ Notification clicked →', { title: notifTitle, body: notifBody, data });
+
+  if (data?.page === 'notifications' || data?.action === 'open_notifications') {
+    this.loadNotificationPage({
+      title: notifTitle,
+      body: notifBody,
+      type: data.type || 'general'
+    });
+  } else {
+    this.loadIframe();   // fallback to chat
+  }
+});
     } catch (error) {
       console.error('Critical error in OneSignal setup:', error);
     }
@@ -248,6 +259,24 @@ this.iframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl('');
 
     this.proceedToChat();
   }
+
+  private loadNotificationPage(data: any = {}) {
+  const phone = localStorage.getItem('userPhone') || '';
+  const firstname = localStorage.getItem('didiname') || '';
+  const email = localStorage.getItem('email') || '';
+  const lastname = localStorage.getItem('lastname') || '';
+
+  let url = `https://quickhelp.com.ng/notifications.php?phone=${encodeURIComponent(phone)}&firstname=${encodeURIComponent(firstname)}&email=${encodeURIComponent(email)}&lastname=${encodeURIComponent(lastname)}&t=${Date.now()}`;
+
+  // Pass notification content from OneSignal
+  if (data.title) url += `&title=${encodeURIComponent(data.title)}`;
+  if (data.body)  url += `&body=${encodeURIComponent(data.body)}`;
+  if (data.type)  url += `&type=${encodeURIComponent(data.type)}`;
+
+  this.iframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  this.isIframeActive = true;
+  this.isOffline = false;
+}
 
 private proceedToChat() {
   const phone = localStorage.getItem('userPhone') || '';
