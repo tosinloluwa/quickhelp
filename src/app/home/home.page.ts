@@ -109,7 +109,7 @@ this.iframeSrc = this.sanitizer.bypassSecurityTrustResourceUrl('');
         console.log('Foreground notification received:', event);
       });
 
-      OneSignal.Notifications.addEventListener('click', (event: any) => {
+OneSignal.Notifications.addEventListener('click', (event: any) => {
   const data = event?.notification?.additionalData || {};
   const notifTitle = event?.notification?.title || '';
   const notifBody  = event?.notification?.body || '';
@@ -316,7 +316,7 @@ private proceedToChat() {
         console.log('Connectivity test failed (image load error)');
         resolve();
       };
-      img.src = 'https://quickhelp.com.ng/favicon.ico?' + Date.now();
+      img.src = 'https://quickhelp.com.ng/icon.ico?' + Date.now();
     });
   }
 

@@ -25,6 +25,7 @@
     "@awesome-cordova-plugins/splash-screen": "^6.7.0",
     "@ionic/angular": "^7.5.0",
     "@ionic/cordova-builders": "^11.0.0",
+    "firebase": "^12.9.0",
     "ionicons": "^7.2.1",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
