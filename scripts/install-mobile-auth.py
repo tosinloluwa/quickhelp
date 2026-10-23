@@ -28,6 +28,11 @@ def main():
                 shutil.copytree(target,backup/'mobile',symlinks=True)
             elif target.exists():
                 dest=backup/target.relative_to(root);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(target,dest)
+        config_path=root.parent/'quickhelp-mobile-config.php'
+        if config_path.exists():
+            shutil.copy2(config_path,backup/'quickhelp-mobile-config.php')
+        else:
+            (backup/'CONFIG_WAS_ABSENT').write_text('This installer created quickhelp-mobile-config.php.\n')
         # Publish the whole new web app atomically after all backups are complete.
         staging=root/'mobile.qh-staging'
         if staging.exists():shutil.rmtree(staging)
@@ -71,6 +76,14 @@ def main():
         live=root/'mobile'
         if live.exists():shutil.rmtree(live)
         if (backup/'mobile').is_dir():shutil.copytree(backup/'mobile',live)
+        config_path=root.parent/'quickhelp-mobile-config.php'
+        saved_config=backup/'quickhelp-mobile-config.php'
+        if saved_config.is_file():
+            shutil.copy2(saved_config,config_path)
+            try:os.chown(config_path,root.stat().st_uid,root.stat().st_gid)
+            except OSError:pass
+        elif (backup/'CONFIG_WAS_ABSENT').is_file():
+            config_path.unlink(missing_ok=True)
         for name in ['user/index.php','user/login_f21.php','user/mobile-passwords.php']:
             saved=backup/name;target=root/name
             if saved.exists():target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(saved,target)
