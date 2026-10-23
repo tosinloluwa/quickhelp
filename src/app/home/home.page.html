@@ -1,91 +1,24 @@
-<ion-header [translucent]="true">
-</ion-header>
-
-<ion-content [fullscreen]="true" class="ion-activatable" style="overflow: hidden;">
-  <div class="landing-page" *ngIf="!isIframeActive">    
-    <div class="avatar-container">
-      <img src="/assets/avatar-nigerian.png" alt="Avatar" />
+<ion-content [fullscreen]="true">
+  <main class="qh" [class.dark]="theme === 'dark'">
+    <div class="app">
+      <header><img class="logo" src="assets/website-logo.png" alt="QuickHelp"><button class="theme" type="button" (click)="toggleTheme()" aria-label="Switch colour theme">◐</button></header>
+      <ng-container *ngIf="!ready"><div class="splash"><h2>Your community.<br>One conversation away.</h2><div class="spinner" aria-hidden="true"></div><p role="status">Opening QuickHelp…</p></div></ng-container>
+      <ng-container *ngIf="ready && !loading">
+        <div class="eyebrow">Your community. Connected.</div><h1>Get <em>instant help</em><br>within your<br>community.</h1>
+        <p>Shop locally, find services and get help.<br>All in one intelligent conversation.</p>
+        <div class="chips"><span>Shop</span><span>Chat</span><span>Get help</span></div>
+        <button class="button google" type="button" (click)="open('google')"><img src="assets/google.png" alt="">Continue with Google</button>
+        <p class="fine">New here? Google creates your account too.</p>
+        <div class="divider">or use your email</div>
+        <button class="button" type="button" (click)="open('login')">Sign in with email →</button>
+        <div class="center"><button class="link" type="button" (click)="open('signup')">Create an account with email</button></div>
+        <button class="button primary" type="button" (click)="open('auto')">Continue to QuickHelp →</button>
+        <p class="fine">Already signed in? Continue with your website session.</p>
+        <div class="center"><button class="link" type="button" (click)="enableNotifications()">Enable notifications</button></div>
+        <p class="error" role="alert" *ngIf="error">{{ error }}</p>
+        <button class="button" type="button" *ngIf="error" (click)="retry()">Try again</button>
+      </ng-container>
+      <ng-container *ngIf="loading"><h2>Getting things ready.</h2><p role="status">Connecting to QuickHelp…</p><div class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div><div class="spinner" aria-hidden="true"></div><button class="button" type="button" (click)="cancel()">Cancel</button></ng-container>
     </div>
-    <ion-text class="welcome-message">Welcome to QuickHelp</ion-text>
-    <ion-button color="primary" (click)="loadIframe()">Click here to start</ion-button>
-    <ion-text *ngIf="!canConnect" class="offline-hint">Connecting</ion-text>
-  </div>
-
-  <div class="iframe-container" *ngIf="isIframeActive && !isOffline">
-    <iframe
-      #chatIframe
-      title="QuickHelp"
-      allow="encrypted-media; camera; microphone; fullscreen; payment; geolocation; clipboard-write; display-capture"
-      [src]="iframeSrc"
-      style="width: 100%; height: 100%; border: none;"
-      (load)="onIframeLoad()"
-      (error)="onIframeError()"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation allow-storage-access-by-user-activation"
-    ></iframe>
-    <div class="camo">QuickHelp</div>
-  </div>
-
-  <div class="loader-container" *ngIf="isOffline && isIframeActive">
-    <ion-text class="offline-message">
-      Kindly wait as I am trying to find a way to connect to the internet
-    </ion-text>
-    <ion-button color="primary" (click)="retryConnection()">Try Again</ion-button>
-  </div>
+  </main>
 </ion-content>
-
-<div *ngIf="showRegModal" class="reg-overlay">
-  <div class="reg-card">
-
-    <div class="reg-header">
-      <img src="/assets/quicke.png" alt="QuickHelp" class="reg-logo" />
-      <h2>Create Account</h2>
-      <p>Join QuickHelp — takes less than a minute</p>
-    </div>
-
-    <div class="reg-body">
-      <div class="reg-row">
-        <div class="reg-field">
-          <span class="reg-icon">👤</span>
-          <input type="text" [(ngModel)]="regForm.first_name" placeholder="First Name" />
-        </div>
-        <div class="reg-field">
-          <span class="reg-icon">👤</span>
-          <input type="text" [(ngModel)]="regForm.last_name" placeholder="Surname" />
-        </div>
-
-      </div>
-
-      <div class="reg-field">
-        <span class="reg-icon">✉️</span>
-        <input type="email" [(ngModel)]="regForm.email" placeholder="Email Address" />
-      </div>
-
-      <div class="reg-field">
-        <span class="reg-icon">📱</span>
-        <input type="tel" [(ngModel)]="regForm.phone_no" placeholder="e.g. 08012345678" maxlength="11" pattern="[0-9]*" inputmode="tel" />
-      </div>
-
-      <div class="reg-field">
-        <span class="reg-icon">🔒</span>
-        <input type="password" [(ngModel)]="regForm.password" placeholder="Create Password" />
-      </div>
-
-     
-      <div class="reg-field">
-        <span class="reg-icon">🔑</span>
-        <input type="password" [(ngModel)]="regForm.confirm_password" placeholder="Confirm Password" />
-      </div>
-
-      <div class="reg-error" *ngIf="regError">⚠️ {{ regError }}</div>
-      <div class="reg-success" *ngIf="regSuccess">✅ {{ regSuccess }}</div>
-
-      <button class="reg-btn" (click)="submitRegistration()" [disabled]="isSubmitting">
-        <span *ngIf="!isSubmitting">Start Chatting →</span>
-        <span *ngIf="isSubmitting" class="reg-spinner"></span>
-      </button>
-
-      <p class="reg-terms">By registering, you agree to our <a href="https://quickhelp.com.ng/terms.php" target="_blank">Terms of Service</a></p>
-    </div>
-
-  </div>
-</div>
