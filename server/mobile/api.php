@@ -104,7 +104,7 @@ try {
             $phone=qha_phone($u['phone_no']);
             qha_query('UPDATE user_devices SET phone_number=NULL,updated_at=NOW() WHERE player_id=? AND phone_number=?',[$device,$phone]);
         }
-        $_SESSION=[];session_regenerate_id(true);$_SESSION['qha_csrf']=bin2hex(random_bytes(32));$out=['state'=>'welcome'];break;
+        $_SESSION=[];session_regenerate_id(true);$_SESSION['qha_csrf']=bin2hex(random_bytes(32));$out=['state'=>'welcome','logged_out'=>true];break;
     default: qha_fail('Unknown action.',404);
     }
     $out['csrf']=$_SESSION['qha_csrf'];echo json_encode($out);

@@ -4,6 +4,7 @@
   let csrf=document.querySelector('meta[name="qh-csrf"]').content;
   let view='loading', phone='', cooldown=0, pollTimer, timer, googleDeadline=0, pending=false, deviceId='', controller, googleEnabled=false;
   let deviceSync=null, linkedDeviceId='', linkedPhone='', deviceEpoch=0;
+  let clickedNotification=null;
   const screen=document.getElementById('screen'), error=document.getElementById('error');
   const initial=new URLSearchParams(location.search).get('view')||'welcome';
   let theme='light';try {theme=localStorage.getItem('qh-theme')==='dark'?'dark':'light';}catch(e){}
@@ -34,7 +35,7 @@
     if(r.state==='code')cooldown=Date.now()+30000;
     show(r.state||'welcome');
     if(r.state==='ready'||r.state==='success')saveDevice();
-    else {linkedDeviceId='';linkedPhone='';deviceEpoch++;bridge({type:'push-cleared'});}
+    else {linkedDeviceId='';linkedPhone='';deviceEpoch++;if(r.logged_out)clickedNotification=null;bridge({type:'push-cleared',signed_out:r.logged_out===true});}
   }
   function saveDevice(){
     if(!deviceId||!['ready','success'].includes(view))return Promise.resolve();
@@ -55,6 +56,11 @@
     return deviceSync;
   }
   window.qhNativeDevice=id=>{if(typeof id==='string'){deviceId=id;if(view==='ready'||view==='success')saveDevice();}};
+  window.qhNativeNotification=value=>{
+    if(value&&typeof value==='object'&&typeof value.id==='string'&&typeof value.title==='string'&&typeof value.body==='string'){
+      clickedNotification={id:value.id.slice(0,100),title:value.title.slice(0,255),body:value.body.slice(0,8000),type:typeof value.type==='string'?value.type.slice(0,40):'general'};
+    }
+  };
   let googleStarted=false;
   window.qhNativeStart=()=>{if(initial==='google'&&view==='welcome'&&!googleStarted&&window.webkit?.messageHandlers?.cordova_iab){googleStarted=true;google();}};
   function bridge(data){if(window.webkit?.messageHandlers?.cordova_iab){window.webkit.messageHandlers.cordova_iab.postMessage(JSON.stringify(data));return true;}return false;}
@@ -101,7 +107,10 @@
       b.disabled=true;
       await saveDevice();
       if(deviceSync)await deviceSync;
-      const form=document.createElement('form');form.method='POST';form.action='enter.php';const input=document.createElement('input');input.type='hidden';input.name='csrf';input.value=csrf;form.append(input);document.body.append(form);form.submit();
+      const form=document.createElement('form');form.method='POST';form.action='enter.php';
+      const fields={csrf};if(clickedNotification)fields.notification=JSON.stringify(clickedNotification);
+      for(const [name,value] of Object.entries(fields)){const input=document.createElement('input');input.type='hidden';input.name=name;input.value=value;form.append(input);}
+      document.body.append(form);form.submit();
     }
   });
   screen.addEventListener('input',e=>{if(e.target.id==='code')e.target.value=e.target.value.replace(/\D/g,'').slice(0,6);});

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonContent, Platform } from '@ionic/angular/standalone';
 import OneSignal from 'onesignal-cordova-plugin';
 
-interface BrowserEvent { url?: string; data?: { type?: string; url?: string; player_id?: string; phone_number?: string }; }
+interface BrowserEvent { url?: string; data?: { type?: string; url?: string; player_id?: string; phone_number?: string; signed_out?: boolean }; }
 interface AppBrowser {
   addEventListener(name: string, callback: (event: BrowserEvent, continueLoad?: (url: string) => void) => void): void;
   executeScript(details: { code: string }): void;
@@ -11,6 +11,7 @@ interface AppBrowser {
   show(): void;
 }
 interface BrowserPlugin { open(url: string, target: string, options?: string): AppBrowser; }
+interface ClickedNotification { id: string; title: string; body: string; type: string; }
 
 @Component({selector:'app-home',templateUrl:'home.page.html',styleUrls:['home.page.scss'],standalone:true,imports:[CommonModule,IonContent]})
 export class HomePage implements OnInit, OnDestroy {
@@ -22,14 +23,23 @@ export class HomePage implements OnInit, OnDestroy {
   private currentUrl='';
   private subscriptionId='';
   private taggedPhone='';
+  private identifiedPhone='';
+  private pushContextCleared=false;
+  private clickedNotification?: ClickedNotification;
   private timeout?: ReturnType<typeof setTimeout>;
   private destination='chat';
   private readonly origin='https://quickhelp.com.ng';
   private readonly resume=()=>this.injectBridge();
   private readonly pushChange=(event: {current: {id?: string | null}})=>{this.subscriptionId=event.current.id||'';this.injectBridge();};
-  private readonly pushClick=(event: {notification: {additionalData?: object}})=>{
-    const data=event.notification.additionalData as {page?: string;action?: string}|undefined;
-    this.zone.run(()=>this.open('auto',data?.page==='notifications'||data?.action==='open_notifications'?'notifications':'chat'));
+  private readonly pushClick=(event: {notification: {notificationId?: string;title?: string;body?: string;additionalData?: object}})=>{
+    const notification=event.notification;
+    const data=notification.additionalData as {page?: string;action?: string;type?: string}|undefined;
+    const text=(value: unknown,max: number)=>typeof value==='string'?value.slice(0,max):'';
+    this.clickedNotification={id:text(notification.notificationId,100)||`push-${Date.now()}`,
+      title:text(notification.title,255)||'QuickHelp notification',body:text(notification.body,8000),type:text(data?.type,40)||'general'};
+    this.zone.run(()=>{
+      if(this.ready)this.open('auto',data?.page==='notifications'||data?.action==='open_notifications'?'notifications':'chat');
+    });
   };
   constructor(private platform: Platform,private zone: NgZone) {
     try {this.theme=localStorage.getItem('qh-theme')==='dark'?'dark':'light';}catch { /* Default remains light. */ }
@@ -80,12 +90,19 @@ export class HomePage implements OnInit, OnDestroy {
         const phone=event.data.phone_number||'';
         if(event.data.player_id!==this.subscriptionId||!/^234[789]\d{9}$/.test(phone))return;
         try {
+          if(this.identifiedPhone!==phone){
+            OneSignal.login(phone);this.identifiedPhone=phone;this.taggedPhone='';this.pushContextCleared=false;
+          }
           if(this.taggedPhone!==phone){OneSignal.User.addTag('phone_number',phone);this.taggedPhone=phone;}
         }catch{/* Retry the tag when the verified device is next acknowledged. */}
         return;
       }
       if(event.data?.type==='push-cleared'){
-        try {OneSignal.User.removeTag('phone_number');this.taggedPhone='';}catch{/* Optional push cleanup. */}
+        if(event.data.signed_out)this.clickedNotification=undefined;
+        try {
+          if(!this.pushContextCleared){OneSignal.logout();this.pushContextCleared=true;}
+          this.identifiedPhone='';this.taggedPhone='';
+        }catch{/* Retry clearing this device's user context on the next auth state. */}
         return;
       }
       if(event.data?.type!=='google'||!event.data.url)return;
@@ -98,7 +115,7 @@ export class HomePage implements OnInit, OnDestroy {
   private isAuthPage(): boolean {try{const url=new URL(this.currentUrl);return url.origin===this.origin&&['/mobile/','/mobile/index.php'].includes(url.pathname);}catch{return false;}}
   private injectBridge(): void {
     if(!this.browser||!this.isAuthPage())return;
-    this.browser.executeScript({code:`window.qhNativeDevice?.(${JSON.stringify(this.subscriptionId)});window.qhNativeStart?.();window.qhResume?.();`});
+    this.browser.executeScript({code:`window.qhNativeDevice?.(${JSON.stringify(this.subscriptionId)});window.qhNativeNotification?.(${JSON.stringify(this.clickedNotification||null)});window.qhNativeStart?.();window.qhResume?.();`});
   }
   private initPush(): void {
     try {

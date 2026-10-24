@@ -58,6 +58,12 @@ function qha_phone($raw) {
     if (!preg_match('/^[789][0-9]{9}$/',$n)) qha_fail('Enter a valid Nigerian mobile number.');
     return '234'.$n;
 }
+function qha_notification_aliases($raw) {
+    $phone=qha_phone($raw);$national=substr($phone,3);
+    // New identities use international digits. Retain legacy caller formats
+    // when targeting users created by previous Android releases.
+    return array_values(array_unique([$phone,'0'.$national,$national,'+'.$phone,trim($raw)]));
+}
 function qha_rate($scope,$identity,$max,$seconds) {
     $key=hash('sha256',$scope.'|'.$identity);$now=time();
     if (random_int(1,100)===1) { qha_query('DELETE FROM qha_rate_limits WHERE reset_at<?',[$now]); qha_query('DELETE FROM qha_oauth_flows WHERE expires_at<?',[$now]); }
