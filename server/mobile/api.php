@@ -85,10 +85,25 @@ try {
     case 'device':
         $u=qha_user();if (!$u||!qha_verified($u)) qha_fail('Verify your phone first.',403);
         $device=qha_input($b,'player_id',100);if (!preg_match('/^[a-zA-Z0-9-]{20,100}$/',$device)) qha_fail('Invalid push subscription.');
-        $update=qha_query('UPDATE user_devices SET phone_number=?,updated_at=NOW() WHERE player_id=?',[$u['phone_no'],$device]);
-        if (!$update->affected_rows) qha_query('INSERT INTO user_devices (player_id,phone_number,created_at,updated_at) VALUES (?,?,NOW(),NOW())',[$device,$u['phone_no']]);
-        $out=['saved'=>true];break;
+        $phone=qha_phone($u['phone_no']);
+        // The legacy table has no unique player_id index. Serialize registrations
+        // and check existence rather than using affected_rows (zero on no-op updates).
+        $lock='qha-device-'.substr(hash('sha256',$device),0,40);
+        $held=qha_one('SELECT GET_LOCK(?,5) AS acquired',[$lock]);
+        if (!$held||(int)$held['acquired']!==1) qha_fail('Notification setup is busy. Please try again.',503);
+        try {
+            $exists=qha_one('SELECT id FROM user_devices WHERE player_id=? LIMIT 1',[$device]);
+            if ($exists) qha_query('UPDATE user_devices SET phone_number=?,updated_at=NOW() WHERE player_id=?',[$phone,$device]);
+            else qha_query('INSERT INTO user_devices (player_id,phone_number,created_at,updated_at) VALUES (?,?,NOW(),NOW())',[$device,$phone]);
+        } finally {qha_query('DO RELEASE_LOCK(?)',[$lock]);}
+        $out=['saved'=>true,'player_id'=>$device,'phone_number'=>$phone];break;
     case 'logout':
+        $device=qha_input($b,'player_id',100);
+        try {$u=qha_user();}catch(QHAMobileError $e){if($e->http!==401)throw $e;$u=null;}
+        if ($device&&$u&&qha_verified($u)) {
+            $phone=qha_phone($u['phone_no']);
+            qha_query('UPDATE user_devices SET phone_number=NULL,updated_at=NOW() WHERE player_id=? AND phone_number=?',[$device,$phone]);
+        }
         $_SESSION=[];session_regenerate_id(true);$_SESSION['qha_csrf']=bin2hex(random_bytes(32));$out=['state'=>'welcome'];break;
     default: qha_fail('Unknown action.',404);
     }

@@ -13,4 +13,4 @@ if (in_array($_GET['next']??'',['chat','notifications'],true)) $_SESSION['qha_ne
 <template id="waiting"><h2>Continue with Google</h2><p>Complete sign-in in your browser, then return to QuickHelp.</p><div class="spinner" aria-hidden="true"></div><p class="center" role="status">Waiting for Google…</p><button class="button" data-google-check>I’ve returned from Google</button><button class="link" data-google-cancel>Cancel</button></template>
 <template id="loading"><h2>Getting things ready.</h2><p role="status">Connecting to QuickHelp…</p><div class="skeleton" aria-hidden="true"><span></span><span></span><span></span></div><div class="spinner" aria-hidden="true"></div><button class="link" data-cancel>Cancel</button></template>
 <template id="offline"><h2>Let’s reconnect.</h2><p>We couldn’t complete the connection. Please check your internet and try again.</p><button class="button primary" data-retry>Try again</button><button class="link" data-view="welcome">Back to welcome</button></template>
-<script src="app.js?v=150" defer></script></body></html>
+<script src="app.js?v=150-push1" defer></script></body></html>

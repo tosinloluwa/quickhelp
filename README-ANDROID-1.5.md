@@ -46,4 +46,10 @@ Use the existing private signing configuration for a Play Store release. Install
 
 ## Review checks
 
+### OneSignal signup continuity
+
+After phone verification or a returning verified login inside the Android app, the hosted page registers the current OneSignal push subscription in the existing portal `user_devices` table. The server acknowledges the saved subscription and verified phone, and the native app restores the original OneSignal `phone_number` tag. The tag uses the verified Nigerian international digits, such as `2348012345678`, matching the stored device phone. Phone numbers submitted to signup or the OTP form are not tagged until verification succeeds. The tag is a push-targeting attribute; it does not create a OneSignal SMS subscription.
+
+Repeated registration updates the existing subscription instead of inserting a row when MySQL reports an unchanged update. A late subscription ID is registered when the SDK provides it while the auth page is open. The Continue action waits for the in-flight registration before navigating to chat. Signing out from the mobile auth page clears the phone tag and unlinks that device from the signed-in phone. Native OneSignal calls still require APK testing; neither `ionic serve` nor a terminal Termii SMS test can establish a native push subscription.
+
 The production Angular bundle built successfully with the locked project dependencies. The PHP endpoints passed static parsing with PHP 7.4 grammar, and the UI smoke test covered Google handoff and email signup through phone verification. Installer/rollback tests used recovered login-file copies and a stub PHP executable, so they checked file backup/restoration, not a real database migration. Live PHP/MySQL, Google, Termii and Android device flows still need testing against the configured server and a phone; no live website or provider credentials are present here.

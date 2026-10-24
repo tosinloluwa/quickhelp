@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonContent, Platform } from '@ionic/angular/standalone';
 import OneSignal from 'onesignal-cordova-plugin';
 
-interface BrowserEvent { url?: string; data?: { type?: string; url?: string }; }
+interface BrowserEvent { url?: string; data?: { type?: string; url?: string; player_id?: string; phone_number?: string }; }
 interface AppBrowser {
   addEventListener(name: string, callback: (event: BrowserEvent, continueLoad?: (url: string) => void) => void): void;
   executeScript(details: { code: string }): void;
@@ -21,6 +21,7 @@ export class HomePage implements OnInit, OnDestroy {
   private browser?: AppBrowser;
   private currentUrl='';
   private subscriptionId='';
+  private taggedPhone='';
   private timeout?: ReturnType<typeof setTimeout>;
   private destination='chat';
   private readonly origin='https://quickhelp.com.ng';
@@ -74,7 +75,20 @@ export class HomePage implements OnInit, OnDestroy {
     ref.addEventListener('loaderror',()=>{if(this.browser!==ref)return;this.zone.run(()=>{this.cancel();this.error='We couldn’t reach QuickHelp. Check your connection and try again.';});});
     ref.addEventListener('exit',()=>{if(this.browser===ref){clearTimeout(this.timeout);this.browser=undefined;this.zone.run(()=>this.loading=false);}});
     ref.addEventListener('message',event=>{
-      if(!this.isAuthPage()||event.data?.type!=='google'||!event.data.url)return;
+      if(this.browser!==ref||!this.isAuthPage())return;
+      if(event.data?.type==='push-linked'){
+        const phone=event.data.phone_number||'';
+        if(event.data.player_id!==this.subscriptionId||!/^234[789]\d{9}$/.test(phone))return;
+        try {
+          if(this.taggedPhone!==phone){OneSignal.User.addTag('phone_number',phone);this.taggedPhone=phone;}
+        }catch{/* Retry the tag when the verified device is next acknowledged. */}
+        return;
+      }
+      if(event.data?.type==='push-cleared'){
+        try {OneSignal.User.removeTag('phone_number');this.taggedPhone='';}catch{/* Optional push cleanup. */}
+        return;
+      }
+      if(event.data?.type!=='google'||!event.data.url)return;
       try {const target=new URL(event.data.url);if(target.origin==='https://accounts.google.com'&&target.pathname==='/o/oauth2/v2/auth')plugin.open(target.href,'_system');}catch{/* Invalid provider URL. */}
     });
     this.timeout=setTimeout(()=>this.zone.run(()=>{if(this.browser===ref&&this.loading){this.cancel();this.error='QuickHelp took too long to respond. Please try again.';}}),20000);

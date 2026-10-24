@@ -3,6 +3,7 @@
   'use strict';
   let csrf=document.querySelector('meta[name="qh-csrf"]').content;
   let view='loading', phone='', cooldown=0, pollTimer, timer, googleDeadline=0, pending=false, deviceId='', controller, googleEnabled=false;
+  let deviceSync=null, linkedDeviceId='', linkedPhone='', deviceEpoch=0;
   const screen=document.getElementById('screen'), error=document.getElementById('error');
   const initial=new URLSearchParams(location.search).get('view')||'welcome';
   let theme='light';try {theme=localStorage.getItem('qh-theme')==='dark'?'dark':'light';}catch(e){}
@@ -27,8 +28,32 @@
     } catch(e){if(e.name==='AbortError')throw new Error('The connection timed out. Please try again.');throw e;}
     finally{clearTimeout(timeout);if(controller===abort)controller=null;}
   }
-  function accept(r) {if(typeof r.google_enabled==='boolean')googleEnabled=r.google_enabled;if(r.phone)phone=r.phone;if(r.state==='code')cooldown=Date.now()+30000;show(r.state||'welcome');if(r.state==='ready'||r.state==='success')saveDevice();}
-  async function saveDevice(){if(deviceId){try{await api('device',{player_id:deviceId});}catch(e){/* Push failure must not block sign-in. */}}}
+  function accept(r) {
+    if(typeof r.google_enabled==='boolean')googleEnabled=r.google_enabled;
+    if(typeof r.phone==='string')phone=r.phone;
+    if(r.state==='code')cooldown=Date.now()+30000;
+    show(r.state||'welcome');
+    if(r.state==='ready'||r.state==='success')saveDevice();
+    else {linkedDeviceId='';linkedPhone='';deviceEpoch++;bridge({type:'push-cleared'});}
+  }
+  function saveDevice(){
+    if(!deviceId||!['ready','success'].includes(view))return Promise.resolve();
+    if(deviceSync)return deviceSync;
+    if(linkedDeviceId===deviceId){bridge({type:'push-linked',player_id:deviceId,phone_number:linkedPhone});return Promise.resolve();}
+    const id=deviceId, epoch=deviceEpoch;
+    deviceSync=api('device',{player_id:id}).then(r=>{
+      if(epoch!==deviceEpoch||!['ready','success'].includes(view)||id!==deviceId)return;
+      if(r.saved&&r.player_id===id&&/^234[789]\d{9}$/.test(r.phone_number||'')){
+        linkedDeviceId=id;
+        linkedPhone=r.phone_number;
+        bridge({type:'push-linked',player_id:id,phone_number:r.phone_number});
+      }
+    }).catch(()=>{/* Retry on the next app resume or Continue action. */}).finally(()=>{
+      deviceSync=null;
+      if(id!==deviceId&&epoch===deviceEpoch)saveDevice();
+    });
+    return deviceSync;
+  }
   window.qhNativeDevice=id=>{if(typeof id==='string'){deviceId=id;if(view==='ready'||view==='success')saveDevice();}};
   let googleStarted=false;
   window.qhNativeStart=()=>{if(initial==='google'&&view==='welcome'&&!googleStarted&&window.webkit?.messageHandlers?.cordova_iab){googleStarted=true;google();}};
@@ -50,7 +75,7 @@
     catch(e){error.textContent=e.message;}
     finally{pending=false;if(view==='waiting')pollTimer=setTimeout(poll,3000);}
   }
-  window.qhResume=()=>{if(view==='waiting')poll();};
+  window.qhResume=()=>{if(view==='waiting')poll();else saveDevice();};
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&view==='waiting')poll();});
   function updateResend(){const b=screen.querySelector('[data-resend]');if(!b)return;const s=Math.max(0,Math.ceil((cooldown-Date.now())/1000));b.disabled=s>0||pending;b.textContent=s?'Resend code in '+s+'s':'Resend code';}
   timer=setInterval(updateResend,1000);
@@ -69,10 +94,13 @@
     if(b.hasAttribute('data-google-cancel')){clearTimeout(pollTimer);if(controller)controller.abort();pending=false;await run('google-cancel');}
     if(b.hasAttribute('data-password')){const p=screen.querySelector('#password');p.type=p.type==='password'?'text':'password';b.textContent=p.type==='password'?'Show':'Hide';}
     if(b.hasAttribute('data-resend'))run('send-code',{phone});
-    if(b.hasAttribute('data-logout'))run('logout');
+    if(b.hasAttribute('data-logout')){if(deviceSync)await deviceSync;run('logout',{player_id:deviceId});}
     if(b.hasAttribute('data-retry'))boot();
     if(b.hasAttribute('data-cancel')){if(controller)controller.abort();show('welcome');}
     if(b.hasAttribute('data-enter')){
+      b.disabled=true;
+      await saveDevice();
+      if(deviceSync)await deviceSync;
       const form=document.createElement('form');form.method='POST';form.action='enter.php';const input=document.createElement('input');input.type='hidden';input.name='csrf';input.value=csrf;form.append(input);document.body.append(form);form.submit();
     }
   });
