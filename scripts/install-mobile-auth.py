@@ -5,6 +5,13 @@ Run on the server as root. Does not populate credentials or publish files remote
 from pathlib import Path
 import argparse, datetime, hashlib, os, shutil, subprocess, sys, tarfile
 
+def safe_unlink(path):
+    # pathlib's missing_ok argument needs Python 3.8; AlmaLinux may use 3.6.
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 def atomic_copy(src,dst):
     dst.parent.mkdir(parents=True,exist_ok=True)
@@ -63,7 +70,7 @@ def main():
         try:subprocess.run([args.php,str(runner)],check=True)
         except Exception:
             print(f'Files installed, database migration failed. Roll back with backup {backup}.',file=sys.stderr);raise
-        finally:runner.unlink(missing_ok=True)
+        finally:safe_unlink(runner)
         if old.exists():shutil.rmtree(old)
         print(f'Installed mobile auth. Backup: {backup}')
         print(f'Config: {oldconfig} (mode 600; fill in Termii and Google credentials privately).')
@@ -83,11 +90,11 @@ def main():
             try:os.chown(config_path,root.stat().st_uid,root.stat().st_gid)
             except OSError:pass
         elif (backup/'CONFIG_WAS_ABSENT').is_file():
-            config_path.unlink(missing_ok=True)
+            safe_unlink(config_path)
         for name in ['user/index.php','user/login_f21.php','user/mobile-passwords.php']:
             saved=backup/name;target=root/name
             if saved.exists():target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(saved,target)
-            elif name.endswith('mobile-passwords.php'):target.unlink(missing_ok=True)
+            elif name.endswith('mobile-passwords.php'):safe_unlink(target)
         subprocess.run([sys.executable,str(Path(__file__).with_name('patch-website-login.py')),'rollback','--root',str(root),'--backup',str(backup)],check=False)
         print('Files restored. The additive qha_* database tables remain in place for audit and safe recovery.')
 if __name__=='__main__':main()
