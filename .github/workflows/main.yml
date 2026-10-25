@@ -1,0 +1,66 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - master
+      - "feature/**"
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # cordova-android 13 needs Gradle 8.x on the PATH
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+
+      # package.json has a devDependency "quickhelp_nigeria": "file:android"
+      # but the android/ folder is not committed, so npm ci would fail.
+      # This stub satisfies it.
+      - name: Create android stub for npm
+        run: |
+          mkdir -p android
+          echo '{ "name": "quickhelp_nigeria", "version": "0.0.1" }' > android/package.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web app (Angular)
+        run: npx ng build --configuration production
+
+      - name: Add Cordova Android platform
+        run: |
+          npm install -g cordova@12
+          cordova platform add android@13
+
+      - name: Build debug APK
+        run: cordova build android --debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: quickhelp-debug-apk
+          path: platforms/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
